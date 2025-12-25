@@ -10,7 +10,7 @@ async function main() {
   const token = await ethers.deployContract("IDRToken");
   await token.waitForDeployment();
   const tokenAddress = await token.getAddress();
-  console.log(`✅ Token IDRS Deployed: ${tokenAddress}`);
+  console.log(`✅ Token IDRS Deployed: ${ethers.getAddress(tokenAddress)}`);
 
   const lending = await ethers.deployContract("InvoiceLending", [tokenAddress, oracle.address]);
   await lending.waitForDeployment();
