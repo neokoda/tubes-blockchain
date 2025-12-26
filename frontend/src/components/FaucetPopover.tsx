@@ -73,7 +73,7 @@ export function FaucetPopover({ onClose }: FaucetPopoverProps) {
             value={amount}
             onChange={(e) => setAmount(e.target.value.replace(/\D/g, ""))}
             placeholder="0"
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-right font-['Outfit'] text-xl text-gray-900 focus:outline-none focus:border-[#50E3C2] transition-colors"
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-left font-['Outfit'] text-xl text-gray-900 focus:outline-none focus:border-[#50E3C2] transition-colors"
           />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-['Plus_Jakarta_Sans'] text-sm">
             IDRS

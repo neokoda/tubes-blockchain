@@ -18,8 +18,8 @@ interface WalletContextType {
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
   chainId: string | null;
-  refreshBalance: () => Promise<void>; // Fungsi baru untuk update saldo manual
-  mintToken: (amount: string) => Promise<void>; // Fungsi Faucet
+  refreshBalance: () => Promise<void>;
+  mintToken: (amount: string) => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
