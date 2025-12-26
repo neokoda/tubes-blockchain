@@ -4,8 +4,11 @@ import React, {
   useState,
   useEffect,
   ReactNode,
+  useCallback,
 } from "react";
 import { toast } from "sonner";
+import { ethers } from "ethers";
+import { IDRS_CONTRACT_ADDRESS, IDRS_ABI } from "../config";
 
 interface WalletContextType {
   address: string | null;
@@ -15,6 +18,8 @@ interface WalletContextType {
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
   chainId: string | null;
+  refreshBalance: () => Promise<void>; // Fungsi baru untuk update saldo manual
+  mintToken: (amount: string) => Promise<void>; // Fungsi Faucet
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -29,19 +34,60 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [chainId, setChainId] = useState<string | null>(null);
 
+  const fetchTokenBalance = useCallback(async (addr: string) => {
+    if (typeof window.ethereum !== "undefined" && addr) {
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        if (!ethers.isAddress(IDRS_CONTRACT_ADDRESS)) {
+          console.warn("Invalid Contract Address in config.ts");
+          return;
+        }
+
+        const contract = new ethers.Contract(
+          IDRS_CONTRACT_ADDRESS,
+          IDRS_ABI,
+          provider
+        );
+
+        const rawBalance = await contract.balanceOf(addr);
+
+        const formattedBalance = ethers.formatUnits(rawBalance, 18);
+
+        setBalance(formattedBalance);
+      } catch (error) {
+        console.error("Error fetching token balance:", error);
+        setBalance("0");
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const checkConnection = async () => {
       if (typeof window.ethereum !== "undefined") {
         try {
-          const accounts = await window.ethereum.request({
-            method: "eth_accounts",
-          });
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const accounts = await provider.listAccounts();
           if (accounts.length > 0) {
-            handleAccountsChanged(accounts);
+            const currentAddress = accounts[0].address;
+            setAddress(currentAddress);
+            await fetchTokenBalance(currentAddress);
+
+            const network = await provider.getNetwork();
+            setChainId(network.chainId.toString());
           }
 
-          window.ethereum.on("chainChanged", (id: string) => setChainId(id));
-          window.ethereum.on("accountsChanged", handleAccountsChanged);
+          window.ethereum.on("accountsChanged", (accounts: string[]) => {
+            if (accounts.length === 0) {
+              disconnectWallet();
+            } else {
+              setAddress(accounts[0]);
+              fetchTokenBalance(accounts[0]);
+            }
+          });
+
+          window.ethereum.on("chainChanged", () => {
+            window.location.reload();
+          });
         } catch (error) {
           console.error("Error checking wallet connection:", error);
         }
@@ -51,38 +97,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     checkConnection();
 
     return () => {
-      if (typeof window.ethereum !== "undefined") {
-        window.ethereum.removeListener(
-          "accountsChanged",
-          handleAccountsChanged
-        );
+      if (window.ethereum) {
+        window.ethereum.removeAllListeners();
       }
     };
-  }, []);
-
-  const handleAccountsChanged = async (accounts: string[]) => {
-    if (accounts.length === 0) {
-      disconnectWallet();
-    } else {
-      setAddress(accounts[0]);
-      await fetchBalance(accounts[0]);
-    }
-  };
-
-  const fetchBalance = async (addr: string) => {
-    if (typeof window.ethereum !== "undefined") {
-      try {
-        const bal = await window.ethereum.request({
-          method: "eth_getBalance",
-          params: [addr, "latest"],
-        });
-        const balanceInEth = parseInt(bal, 16) / 1e18;
-        setBalance(balanceInEth.toFixed(4));
-      } catch (error) {
-        console.error("Error fetching balance", error);
-      }
-    }
-  };
+  }, [fetchTokenBalance]);
 
   const connectWallet = async () => {
     if (typeof window.ethereum === "undefined") {
@@ -92,10 +111,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     setIsConnecting(true);
     try {
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-      });
-      handleAccountsChanged(accounts);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const accounts = await provider.send("eth_requestAccounts", []);
+
+      const currentAddress = accounts[0];
+      setAddress(currentAddress);
+      await fetchTokenBalance(currentAddress);
+
       toast.success("Wallet connected successfully!");
     } catch (error: any) {
       toast.error("Failed to connect wallet: " + error.message);
@@ -107,7 +129,39 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const disconnectWallet = () => {
     setAddress(null);
     setBalance("0");
+    setChainId(null);
+
     toast.info("Wallet disconnected");
+  };
+
+  const mintToken = async (amountStr: string) => {
+    if (!address) return;
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(
+        IDRS_CONTRACT_ADDRESS,
+        IDRS_ABI,
+        signer
+      );
+
+      const amountInWei = ethers.parseUnits(amountStr, 18);
+
+      toast.loading("Minting IDRS Tokens...");
+
+      const tx = await contract.faucet(address, amountInWei);
+      await tx.wait();
+
+      toast.dismiss();
+      toast.success(`Successfully minted ${amountStr} IDRS!`);
+
+      await fetchTokenBalance(address);
+    } catch (error: any) {
+      console.error(error);
+      toast.dismiss();
+      toast.error("Minting failed. Make sure you are on the right network.");
+    }
   };
 
   return (
@@ -120,6 +174,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         connectWallet,
         disconnectWallet,
         chainId,
+        refreshBalance: () =>
+          address ? fetchTokenBalance(address) : Promise.resolve(),
+        mintToken,
       }}
     >
       {children}

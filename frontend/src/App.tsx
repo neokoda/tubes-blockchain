@@ -1,3 +1,4 @@
+import { JSX, useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -15,28 +16,28 @@ import { InvestorMarketplace } from "./components/InvestorMarketplace";
 import { Portfolio } from "./components/Portfolio";
 import { WalletWidget } from "./components/WalletWidget";
 import { BusinessProfileModal } from "./components/BusinessProfileModal";
+import { FaucetPopover } from "./components/FaucetPopover";
 import { Zap, User, TrendingUp } from "lucide-react";
-import { useState, useEffect, JSX } from "react";
 import { toast } from "sonner";
 
 function NavigationBar() {
-  const { isConnected, address, balance, disconnectWallet } = useWallet();
+  const { isConnected, address, balance } = useWallet();
   const { businessProfile, setBusinessProfile } = useData();
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showFaucet, setShowFaucet] = useState(false);
+
   const location = useLocation();
 
   const isInvestorMode =
     location.pathname.startsWith("/investor") ||
     location.pathname.startsWith("/portfolio");
   const mode = isInvestorMode ? "investor" : "borrower";
+  const currentView = location.pathname.split("/")[1] || "borrower";
 
-  useEffect(() => {
-    if (isConnected && !businessProfile && mode === "borrower") {
-    }
-  }, [isConnected, businessProfile, mode]);
-
-  const handleClaimFaucet = () => {
-    toast.success("10,000 IDRS received!", { duration: 3000 });
+  const handleSaveProfile = (profile: any) => {
+    setBusinessProfile(profile);
+    setShowProfileModal(false);
+    toast.success("Business profile saved!");
   };
 
   if (!isConnected) return null;
@@ -88,8 +89,8 @@ function NavigationBar() {
               <>
                 <Link
                   to="/borrower"
-                  className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                    location.pathname === "/borrower"
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    currentView === "borrower"
                       ? "bg-gray-900/10"
                       : "hover:bg-gray-900/5"
                   }`}
@@ -98,7 +99,7 @@ function NavigationBar() {
                 </Link>
                 <button
                   onClick={() => setShowProfileModal(true)}
-                  className="px-4 py-2 rounded-lg hover:bg-gray-900/5 transition-colors text-sm font-medium"
+                  className="px-4 py-2 rounded-lg hover:bg-gray-900/5 transition-colors"
                 >
                   Profile
                 </button>
@@ -109,8 +110,8 @@ function NavigationBar() {
               <>
                 <Link
                   to="/investor"
-                  className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                    location.pathname === "/investor"
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    currentView === "investor"
                       ? "bg-gray-900/10"
                       : "hover:bg-gray-900/5"
                   }`}
@@ -119,8 +120,8 @@ function NavigationBar() {
                 </Link>
                 <Link
                   to="/portfolio"
-                  className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                    location.pathname === "/portfolio"
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    currentView === "portfolio"
                       ? "bg-gray-900/10"
                       : "hover:bg-gray-900/5"
                   }`}
@@ -130,15 +131,21 @@ function NavigationBar() {
               </>
             )}
 
-            <button
-              onClick={handleClaimFaucet}
-              className="px-4 py-2 rounded-full bg-[#50E3C2]/20 text-[#50E3C2] hover:bg-[#50E3C2]/30 transition-colors flex items-center gap-2"
-            >
-              <Zap className="w-4 h-4" />
-              <span className="font-['Plus_Jakarta_Sans'] text-sm font-semibold">
-                Claim IDRS
-              </span>
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowFaucet(!showFaucet)}
+                className="px-4 py-2 rounded-full bg-[#50E3C2]/20 text-[#50E3C2] hover:bg-[#50E3C2]/30 transition-colors flex items-center gap-2"
+              >
+                <Zap className="w-4 h-4" />
+                <span className="font-['Plus_Jakarta_Sans'] text-sm font-semibold">
+                  Claim IDRS
+                </span>
+              </button>
+
+              {showFaucet && (
+                <FaucetPopover onClose={() => setShowFaucet(false)} />
+              )}
+            </div>
 
             <WalletWidget address={address || ""} balance={balance} />
           </div>
@@ -148,11 +155,7 @@ function NavigationBar() {
       {showProfileModal && (
         <BusinessProfileModal
           profile={businessProfile}
-          onSave={(profile) => {
-            setBusinessProfile(profile);
-            setShowProfileModal(false);
-            toast.success("Business profile saved!");
-          }}
+          onSave={handleSaveProfile}
           onClose={() => {
             if (businessProfile) {
               setShowProfileModal(false);
@@ -165,7 +168,6 @@ function NavigationBar() {
   );
 }
 
-// Router Components
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { isConnected } = useWallet();
   if (!isConnected) return <Navigate to="/" replace />;

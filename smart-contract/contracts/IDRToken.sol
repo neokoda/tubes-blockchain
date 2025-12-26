@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract IDRToken is ERC20 {
     constructor() ERC20("Rupiah Stable", "IDRS") {
-        _mint(msg.sender, 1000000000 * 10**18);
+        _mint(msg.sender, 1000000000 * 10 ** 18);
     }
 
     function faucet(address to, uint256 amount) external {
