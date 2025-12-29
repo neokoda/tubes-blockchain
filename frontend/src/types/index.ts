@@ -3,7 +3,7 @@ export type UserMode = 'borrower' | 'investor';
 export interface BusinessProfile {
   name: string;
   description: string;
-  logoUrl?: string;
+  npwp: string;
 }
 
 export interface Loan {

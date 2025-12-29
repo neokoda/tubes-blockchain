@@ -24,7 +24,7 @@ async function main() {
 
   console.log("\n--- [Step 1] UMKM Mengajukan Pinjaman ---");
   const loanAmt = ethers.parseEther("100000000");
-  await lending.connect(umkm).createLoanRequest(loanAmt, 10, "QmHashIPFS_Dummy");
+  await lending.connect(umkm).createLoanRequest(loanAmt, 10, "QmHashIPFS_Dummy", "TEST-INV-001");
   console.log("📝 Loan Created");
 
   console.log("\n--- [Step 2] Oracle Verifikasi ---");

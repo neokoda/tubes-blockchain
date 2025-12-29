@@ -1,10 +1,19 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import { BusinessProfile, Loan } from "../types";
 import { useWallet } from "./WalletContext";
+import { toast } from "sonner";
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 interface DataContextType {
   businessProfile: BusinessProfile | null;
-  setBusinessProfile: (profile: BusinessProfile) => void;
+  setBusinessProfile: (profile: BusinessProfile) => Promise<void>;
   loans: Loan[];
   addLoan: (loan: Loan) => void;
   updateLoanStatus: (
@@ -12,46 +21,74 @@ interface DataContextType {
     status: Loan["status"],
     fundedAmount?: number
   ) => void;
+  refreshProfile: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  // const { address } = useWallet();
+  const { address } = useWallet();
 
-  const [businessProfile, setBusinessProfile] =
+  const [businessProfile, setBusinessProfileState] =
     useState<BusinessProfile | null>(null);
+  const [loans, setLoans] = useState<Loan[]>([]);
 
-  const [loans, setLoans] = useState<Loan[]>([
-    {
-      id: "L001",
-      title: "Inventory Expansion",
-      description: "Need funding for seasonal inventory purchase",
-      amount: 50000000,
-      duration: 30,
-      interestRate: 8,
-      status: "funded",
-      fundedAmount: 50000000,
-      borrowerAddress: "0x123...mock",
-      businessName: "Acme Corp",
-      businessDescription: "Global supplier",
-      createdAt: Date.now(),
-    },
-    {
-      id: "L002",
-      title: "Equipment Upgrade",
-      description: "Purchasing new CNC machinery",
-      amount: 25000000,
-      duration: 60,
-      interestRate: 10,
-      status: "open",
-      fundedAmount: 18000000,
-      borrowerAddress: "0x888...mock",
-      businessName: "TechParts",
-      businessDescription: "Precision engineering",
-      createdAt: Date.now(),
-    },
-  ]);
+  useEffect(() => {
+    if (address) {
+      refreshProfile();
+    } else {
+      setBusinessProfileState(null);
+    }
+  }, [address]);
+
+  const refreshProfile = async () => {
+    if (!address) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/profile/${address}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.business_name) {
+          setBusinessProfileState({
+            name: data.business_name,
+            description: data.description,
+            npwp: data.npwp,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch profile:", error);
+    }
+  };
+
+  const setBusinessProfile = async (profile: BusinessProfile) => {
+    if (!address) {
+      toast.error("Connect wallet first!");
+      return;
+    }
+
+    try {
+      const payload = {
+        wallet_address: address,
+        business_name: profile.name,
+        description: profile.description,
+        npwp: profile.npwp,
+      };
+
+      const res = await fetch(`${BACKEND_URL}/profile`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Failed to save profile");
+
+      setBusinessProfileState(profile);
+      toast.success("Business profile saved to database!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error saving profile to backend");
+    }
+  };
 
   const addLoan = (loan: Loan) => {
     setLoans((prev) => [...prev, loan]);
@@ -85,6 +122,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         loans,
         addLoan,
         updateLoanStatus,
+        refreshProfile,
       }}
     >
       {children}
