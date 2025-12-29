@@ -52,7 +52,6 @@ async function startOracle() {
 
         console.log(`Oracle Active`);
         console.log(`Listening to Contract: ${CONTRACT_ADDRESS}`);
-        console.log(`Mode: Manual Polling (Safe for Localhost)`);
 
         let lastProcessedBlock = await provider.getBlockNumber();
 
