@@ -1,14 +1,14 @@
+import { ethers } from "ethers";
 import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
   ReactNode,
+  createContext,
   useCallback,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
 import { toast } from "sonner";
-import { ethers } from "ethers";
-import { IDRS_CONTRACT_ADDRESS, IDRS_ABI } from "../config";
+import { IDRS_ABI, IDRS_CONTRACT_ADDRESS } from "../config";
 
 interface WalletContextType {
   address: string | null;
@@ -140,32 +140,120 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   const mintToken = async (amountStr: string) => {
-    if (!address) return;
+    console.log("🚀 === MINT TOKEN DEBUG START ===");
+    console.log("📍 Contract Address:", IDRS_CONTRACT_ADDRESS);
+    console.log("📍 Your Address:", address);
+    console.log("💰 Amount to Mint:", amountStr);
+    
+    if (!address) {
+      console.error("❌ No address connected!");
+      toast.error("Please connect your wallet first!");
+      return;
+    }
 
     try {
       const providerInstance = new ethers.BrowserProvider(window.ethereum);
+      const network = await providerInstance.getNetwork();
+      
+      console.log("🌐 Current Network:");
+      console.log("   - Chain ID:", network.chainId.toString());
+      console.log("   - Chain Name:", network.name);
+      console.log("   - Expected: 31337 (Hardhat Local)");
+      
+      // Check if on correct network
+      if (network.chainId !== 31337n) {
+        const errorMsg = `Wrong network! You're on chain ${network.chainId}. Please switch to Hardhat Local (Chain ID: 31337)`;
+        console.error("❌", errorMsg);
+        toast.error(errorMsg);
+        return;
+      }
+      
+      console.log("✅ Network check passed!");
+      
+      if (!ethers.isAddress(IDRS_CONTRACT_ADDRESS)) {
+        console.error("❌ Invalid contract address:", IDRS_CONTRACT_ADDRESS);
+        toast.error("Invalid contract address in config!");
+        return;
+      }
+      console.log("✅ Contract address is valid");
+
       const signer = await providerInstance.getSigner();
+      console.log("✅ Signer obtained:", await signer.getAddress());
+      
       const contract = new ethers.Contract(
         IDRS_CONTRACT_ADDRESS,
         IDRS_ABI,
         signer
       );
+      console.log("✅ Contract instance created");
+
+      const code = await providerInstance.getCode(IDRS_CONTRACT_ADDRESS);
+      if (code === "0x") {
+        console.error("❌ No contract found at address:", IDRS_CONTRACT_ADDRESS);
+        toast.error("Contract not deployed at this address! Did you deploy the contracts?");
+        return;
+      }
+      console.log("✅ Contract exists at address");
 
       const amountInWei = ethers.parseUnits(amountStr, 18);
+      console.log("💸 Amount in Wei:", amountInWei.toString());
 
-      toast.loading("Minting IDRS Tokens...");
+      toast.loading("Minting IDRS Tokens...", { id: "minting" });
+
+      console.log("📤 Calling faucet function...");
+      console.log("   - To:", address);
+      console.log("   - Amount:", amountInWei.toString());
 
       const tx = await contract.faucet(address, amountInWei);
-      await tx.wait();
+      console.log("✅ Transaction sent!");
+      console.log("   - Hash:", tx.hash);
+      
+      toast.loading("Waiting for confirmation...", { id: "minting" });
+      
+      const receipt = await tx.wait();
+      console.log("✅ Transaction confirmed!");
+      console.log("   - Block:", receipt.blockNumber);
+      console.log("   - Gas Used:", receipt.gasUsed.toString());
 
-      toast.dismiss();
+      toast.dismiss("minting");
       toast.success(`Successfully minted ${amountStr} IDRS!`);
 
+      console.log("🔄 Refreshing balance...");
       await fetchTokenBalance(address);
+      console.log("✅ Balance refreshed");
+      
+      console.log("🎉 === MINT TOKEN SUCCESS ===");
     } catch (error: any) {
-      console.error(error);
-      toast.dismiss();
-      toast.error("Minting failed. Make sure you are on the right network.");
+      console.error("❌ === MINT TOKEN ERROR ===");
+      console.error("Error Type:", error.constructor.name);
+      console.error("Error Code:", error.code);
+      console.error("Error Message:", error.message);
+      console.error("Full Error:", error);
+      
+      if (error.code === "ACTION_REJECTED") {
+        console.error("❌ User rejected transaction");
+        toast.dismiss("minting");
+        toast.error("Transaction rejected by user");
+      } else if (error.code === "NETWORK_ERROR") {
+        console.error("❌ Network error - is Hardhat node running?");
+        toast.dismiss("minting");
+        toast.error("Network error. Is Hardhat node running?");
+      } else if (error.code === "CALL_EXCEPTION") {
+        console.error("❌ Contract call failed");
+        console.error("Reason:", error.reason);
+        toast.dismiss("minting");
+        toast.error(`Contract error: ${error.reason || "Unknown error"}`);
+      } else if (error.message?.includes("insufficient funds")) {
+        console.error("❌ Insufficient ETH for gas");
+        toast.dismiss("minting");
+        toast.error("Insufficient ETH for gas fees");
+      } else {
+        console.error("❌ Unknown error");
+        toast.dismiss("minting");
+        toast.error(`Minting failed: ${error.message || "Unknown error"}`);
+      }
+      
+      console.log("=== END ERROR LOG ===");
     }
   };
 
