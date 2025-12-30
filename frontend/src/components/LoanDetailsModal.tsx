@@ -27,10 +27,10 @@ export function LoanDetailsModal({
   const maxFundAmount = Math.min(remainingAmount, balance);
   const fundingProgress = (loan.fundedAmount / loan.amount) * 100;
 
-  console.log("🔍 Loan amount:", loan.amount);
-  console.log("🔍 Funded amount:", loan.fundedAmount);
-  console.log("🔍 Remaining:", remainingAmount);
-  console.log("🔍 Balance:", balance);
+  console.log("Loan amount:", loan.amount);
+  console.log("Funded amount:", loan.fundedAmount);
+  console.log("Remaining:", remainingAmount);
+  console.log("Balance:", balance);
 
   const estimatedReturn = fundAmount
     ? (parseFloat(fundAmount) * (1 + loan.interestRate / 100)).toFixed(2)

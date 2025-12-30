@@ -6,8 +6,8 @@ import React, {
   useState,
 } from "react";
 import { toast } from "sonner";
+import { useBlockchain } from "../hooks/useBlockchain";
 import { BusinessProfile, Loan } from "../types";
-import { useBlockchain } from "../utils/useBlockchain";
 import { useWallet } from "./WalletContext";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -80,18 +80,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshLoans = async () => {
-    console.log("🔍 refreshLoans called, isConnected:", isConnected);
+    console.log("refreshLoans called, isConnected:", isConnected);
     
     if (!isConnected) {
-      console.log("❌ Not connected, returning early");
+      console.log("Not connected, returning early");
       return;
     }
   
     setLoading(true);
     try {
-      console.log("📡 Calling fetchLoans...");
+      console.log("Calling fetchLoans...");
       const blockchainLoans = await fetchLoans();
-      console.log("✅ Blockchain loans fetched:", blockchainLoans);
+      console.log("Blockchain loans fetched:", blockchainLoans);
       
       const transformedLoans: Loan[] = blockchainLoans.map((loan: any) => ({
         id: loan.id,
@@ -106,7 +106,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         investors: loan.investors || [],
       }));
   
-      console.log("✅ Transformed loans:", transformedLoans);
+      console.log("Transformed loans:", transformedLoans);
       setLoans(transformedLoans);
     } catch (error) {
       console.error("❌ Error fetching loans from blockchain:", error);

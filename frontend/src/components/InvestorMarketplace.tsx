@@ -1,4 +1,3 @@
-// InvestorMarketplace.tsx
 import { CheckCircle2, RefreshCw, TrendingUp, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useData } from "../context/DataContext";

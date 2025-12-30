@@ -59,8 +59,7 @@ export const useBlockchain = () => {
         
         setLendingContract(lending);
         setTokenContract(token);
-        
-        console.log("✅ Auto-connected to wallet:", addr);
+
       }
     } catch (error) {
       console.log("No existing connection");
@@ -85,7 +84,6 @@ export const useBlockchain = () => {
       setLendingContract(lending);
       setTokenContract(token);
 
-      console.log("✅ Connected to wallet:", addr);
       return addr;
     } catch (error) {
       console.error("Connection error:", error);
@@ -103,7 +101,6 @@ export const useBlockchain = () => {
 
   const fetchLoans = async () => {
     try {
-      console.log("🔗 fetchLoans: provider exists?", !!provider);
       if (!provider) throw new Error("No provider");
   
       const readOnlyContract = new ethers.Contract(
@@ -112,19 +109,15 @@ export const useBlockchain = () => {
         provider
       );
   
-      console.log("🔗 Contract address:", LENDING_CONTRACT_ADDRESS);
       const loanCounter = await readOnlyContract.nextLoanId();
-      console.log("🔗 Next loan ID:", loanCounter.toString());
       
       const loans = [];
   
       for (let id = 1; id < Number(loanCounter); id++) {
         try {
           const loan = await readOnlyContract.loans(id);
-          console.log(`🔗 Loan ${id}:`, loan);
           
           if (loan.borrower === ethers.ZeroAddress) {
-            console.log(`⚠️ Loan ${id} has zero address, skipping`);
             continue;
           }
   
@@ -132,7 +125,7 @@ export const useBlockchain = () => {
           try {
             investors = await readOnlyContract.getInvestors(id);
           } catch (e) {
-            console.log(`⚠️ Could not fetch investors for loan ${id}`);
+            console.log(`Could not fetch investors for loan ${id}`);
           }
   
           const statusMap = ["pending", "open", "active", "closed"];
@@ -153,8 +146,6 @@ export const useBlockchain = () => {
           console.error(`❌ Error fetching loan ${id}:`, error);
         }
       }
-  
-      console.log("✅ Total loans fetched:", loans);
       return loans;
     } catch (error) {
       console.error("❌ Error fetching loans:", error);
