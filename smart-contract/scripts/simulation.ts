@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  console.log("=== 🚀 MULAI SIMULASI CHAINVOICE (Stable V2) ===");
+  console.log("=== MULAI SIMULASI CHAINVOICE (Stable V2) ===");
 
   const [admin, umkm, investorA, investorB, oracle] = await ethers.getSigners();
   console.log(`- UMKM: ${umkm.address}`);
@@ -10,12 +10,12 @@ async function main() {
   const token = await ethers.deployContract("IDRToken");
   await token.waitForDeployment();
   const tokenAddress = await token.getAddress();
-  console.log(`✅ Token IDRS Deployed: ${ethers.getAddress(tokenAddress)}`);
+  console.log(`Token IDRS Deployed: ${ethers.getAddress(tokenAddress)}`);
 
   const lending = await ethers.deployContract("InvoiceLending", [tokenAddress, oracle.address]);
   await lending.waitForDeployment();
   const lendingAddress = await lending.getAddress();
-  console.log(`✅ Lending App Deployed: ${lendingAddress}`);
+  console.log(`Lending App Deployed: ${lendingAddress}`);
 
   await token.faucet(investorA.address, ethers.parseEther("100000000"));
   await token.faucet(investorB.address, ethers.parseEther("50000000"));
@@ -24,7 +24,9 @@ async function main() {
 
   console.log("\n--- [Step 1] UMKM Mengajukan Pinjaman ---");
   const loanAmt = ethers.parseEther("100000000");
-  await lending.connect(umkm).createLoanRequest(loanAmt, 10, "QmHashIPFS_Dummy", "TEST-INV-001");
+  const duration = 30 * 24 * 60 * 60;
+
+  await lending.connect(umkm).createLoanRequest(loanAmt, 10, duration, "QmHashIPFS_Dummy", "TEST-INV-001");
   console.log("Loan Created");
 
   console.log("\n--- [Step 2] Oracle Verifikasi ---");

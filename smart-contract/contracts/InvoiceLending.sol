@@ -20,6 +20,8 @@ contract InvoiceLending {
         string ipfsHash;
         string invoiceNumber;
         uint256 interestRate;
+        uint256 duration;
+        uint256 startTime;
         LoanState state;
         address[] investors;
     }
@@ -35,7 +37,8 @@ contract InvoiceLending {
         uint256 loanId,
         address borrower,
         uint256 amount,
-        string invoiceNumber
+        string invoiceNumber,
+        uint256 duration
     );
     event LoanVerified(uint256 loanId, bool isValid);
     event Funded(uint256 loanId, address investor, uint256 amount);
@@ -55,6 +58,7 @@ contract InvoiceLending {
     function createLoanRequest(
         uint256 _amount,
         uint256 _interest,
+        uint256 _duration,
         string memory _ipfsHash,
         string memory _invoiceNumber
     ) external {
@@ -63,11 +67,18 @@ contract InvoiceLending {
         newLoan.borrower = msg.sender;
         newLoan.amountRequested = _amount;
         newLoan.interestRate = _interest;
+        newLoan.duration = _duration;
         newLoan.ipfsHash = _ipfsHash;
         newLoan.invoiceNumber = _invoiceNumber;
         newLoan.state = LoanState.PENDING;
 
-        emit LoanCreated(nextLoanId, msg.sender, _amount, _invoiceNumber);
+        emit LoanCreated(
+            nextLoanId,
+            msg.sender,
+            _amount,
+            _invoiceNumber,
+            _duration
+        );
         nextLoanId++;
     }
 
@@ -88,7 +99,6 @@ contract InvoiceLending {
             loan.amountFunded + _amount <= loan.amountRequested,
             "Overfunded"
         );
-
         require(
             token.transferFrom(msg.sender, address(this), _amount),
             "Transfer Failed"
@@ -109,6 +119,7 @@ contract InvoiceLending {
         require(loan.amountFunded >= loan.amountRequested, "Not Fully Funded");
 
         loan.state = LoanState.ACTIVE;
+        loan.startTime = block.timestamp;
         token.transfer(loan.borrower, loan.amountFunded);
         emit Disbursed(_loanId, loan.amountFunded);
     }
@@ -117,14 +128,12 @@ contract InvoiceLending {
         Loan storage loan = loans[_loanId];
         require(msg.sender == loan.borrower, "Not Borrower");
         require(loan.state == LoanState.ACTIVE, "Not Active");
-
         uint256 totalRepayment = loan.amountRequested +
             ((loan.amountRequested * loan.interestRate) / 100);
         require(
             token.transferFrom(msg.sender, address(this), totalRepayment),
             "Transfer Failed"
         );
-
         for (uint i = 0; i < loan.investors.length; i++) {
             address inv = loan.investors[i];
             uint256 share = (contributions[_loanId][inv] * totalRepayment) /

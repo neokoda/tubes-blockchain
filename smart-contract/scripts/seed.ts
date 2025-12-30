@@ -10,14 +10,18 @@ async function main() {
   const lending = await ethers.getContractAt("InvoiceLending", LENDING_ADDRESS);
 
   const loanAmt = ethers.parseEther("100000000");
+  const duration = 30 * 24 * 60 * 60;
+
   await lending.connect(umkm).createLoanRequest(
     loanAmt,
     10,
+    duration,
     "QmDummyIPFS",
     "DUMMY-INV-002"
   );
 
-  const loanId = (await lending.nextLoanId()) - 1n;
+  const nextId = await lending.nextLoanId();
+  const loanId = nextId - 1n;
   console.log("New Loan ID:", loanId.toString());
 
   await lending.connect(oracle).verifyLoan(loanId, true);

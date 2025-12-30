@@ -8,8 +8,6 @@ export interface BusinessProfile {
 
 export interface Loan {
   id: string;
-  title: string;
-  description: string;
   amount: number;
   duration: number;
   interestRate: number;

@@ -2,21 +2,20 @@ import { useState, useEffect } from "react";
 import {
   Upload,
   FileText,
-  CheckCircle,
   Clock,
   Loader2,
   XCircle,
-  ExternalLink,
   AlertCircle,
   CheckCircle2,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useWallet } from "../context/WalletContext";
 import { useData } from "../context/DataContext";
-import { Loan } from "../types";
 import { uploadToPinata } from "../utils/pinata";
 import { ethers } from "ethers";
 import { INVOICE_LENDING_ADDRESS, INVOICE_LENDING_ABI } from "../config";
+import { Loan } from "../types";
 
 const mapSCStatusToUI = (scStatus: number): Loan["status"] => {
   switch (scStatus) {
@@ -39,16 +38,15 @@ export function BorrowerDashboard() {
   const { address, provider } = useWallet();
   const { businessProfile } = useData();
 
-  const [loanTitle, setLoanTitle] = useState("");
-  const [loanDescription, setLoanDescription] = useState("");
   const [loanAmount, setLoanAmount] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [duration, setDuration] = useState(30);
+  const [duration, setDuration] = useState<number | "">(30);
   const [interestRate, setInterestRate] = useState("5");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [blockchainLoans, setBlockchainLoans] = useState<Loan[]>([]);
+  // Using any here to accommodate new fields not yet in Loan type if not updated
+  const [blockchainLoans, setBlockchainLoans] = useState<any[]>([]);
 
   useEffect(() => {
     if (address && provider) {
@@ -68,27 +66,27 @@ export function BorrowerDashboard() {
       );
 
       const nextId = await contract.nextLoanId();
-      const tempLoans: Loan[] = [];
+      const tempLoans: any[] = [];
 
       for (let i = 1; i < nextId; i++) {
         const loanData = await contract.loans(i);
 
         if (loanData[1].toLowerCase() === address?.toLowerCase()) {
-          const statusUI = mapSCStatusToUI(Number(loanData[7]));
+          // Struct indices:
+          // 0: id, 1: borrower, 2: requested, 3: funded, 4: ipfs,
+          // 5: invoice, 6: interest, 7: duration, 8: startTime, 9: state
+          const statusUI = mapSCStatusToUI(Number(loanData[9]));
 
           tempLoans.push({
             id: loanData[0].toString(),
-            title: `Invoice #${loanData[5]}`,
-            description: `Loan Request for Invoice ${loanData[5]}`,
             amount: Number(ethers.formatEther(loanData[2])),
-            duration: 30, // Assuming fixed or fetched if available
+            duration: Number(loanData[7]), // Duration in seconds
+            startTime: Number(loanData[8]), // Start timestamp
             interestRate: Number(loanData[6]),
             status: statusUI,
             fundedAmount: Number(ethers.formatEther(loanData[3])),
             borrowerAddress: loanData[1],
             businessName: businessProfile?.name || "My Business",
-            businessDescription: "...",
-            createdAt: Date.now(),
             invoiceNumber: loanData[5],
             ipfsHash: loanData[4],
           });
@@ -109,13 +107,7 @@ export function BorrowerDashboard() {
   };
 
   const handleSubmitApplication = async () => {
-    if (
-      !loanTitle ||
-      !loanDescription ||
-      !loanAmount ||
-      !uploadedFile ||
-      !invoiceNumber
-    ) {
+    if (!loanAmount || !uploadedFile || !invoiceNumber || !duration) {
       toast.error("Please fill all fields including Invoice Number!");
       return;
     }
@@ -146,10 +138,12 @@ export function BorrowerDashboard() {
       );
 
       const amountWei = ethers.parseUnits(loanAmount, 18);
+      const durationSeconds = Number(duration) * 24 * 60 * 60; // Convert days to seconds
 
       const tx = await contract.createLoanRequest(
         amountWei,
         interestRate,
+        durationSeconds,
         ipfsHash,
         invoiceNumber
       );
@@ -158,13 +152,10 @@ export function BorrowerDashboard() {
       await tx.wait();
 
       toast.success("Loan application submitted successfully!");
-
-      setLoanTitle("");
-      setLoanDescription("");
       setLoanAmount("");
       setInvoiceNumber("");
+      setDuration(30);
       setUploadedFile(null);
-
       fetchBlockchainLoans();
     } catch (error: any) {
       console.error(error);
@@ -229,46 +220,47 @@ export function BorrowerDashboard() {
     }
   };
 
-  // UI Configuration for Status Badges
-  const getStatusConfig = (status: Loan["status"]) => {
+  const getStatusStyle = (status: Loan["status"]) => {
     switch (status) {
       case "verifying":
         return {
-          label: "Verifying",
-          color: "bg-yellow-100 text-yellow-700",
+          bg: "#FEF9C3",
+          text: "#A16207",
           icon: <Loader2 size={16} className="animate-spin" />,
         };
       case "open":
-        return {
-          label: "Open for Funding",
-          color: "bg-blue-100 text-blue-700",
-          icon: <Clock size={16} />,
-        };
+        return { bg: "#DBEAFE", text: "#1D4ED8", icon: <Clock size={16} /> };
       case "funded":
         return {
-          label: "Fully Funded",
-          color: "bg-[#50E3C2]/20 text-[#2A9D8F]",
+          bg: "#D1FAE5",
+          text: "#047857",
           icon: <CheckCircle2 size={16} />,
         };
       case "repaid":
         return {
-          label: "Repaid",
-          color: "bg-green-100 text-green-700",
+          bg: "#DCFCE7",
+          text: "#15803D",
           icon: <CheckCircle2 size={16} />,
         };
       case "rejected":
-        return {
-          label: "Rejected",
-          color: "bg-red-100 text-red-700",
-          icon: <XCircle size={16} />,
-        };
+        return { bg: "#FEE2E2", text: "#B91C1C", icon: <XCircle size={16} /> };
       default:
         return {
-          label: status,
-          color: "bg-gray-100 text-gray-700",
+          bg: "#F3F4F6",
+          text: "#374151",
           icon: <AlertCircle size={16} />,
         };
     }
+  };
+
+  const formatRepayDate = (startTime: number, durationSeconds: number) => {
+    if (startTime === 0) return "-";
+    const deadline = new Date((startTime + durationSeconds) * 1000);
+    return deadline.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
   return (
@@ -282,32 +274,7 @@ export function BorrowerDashboard() {
 
           <div className="space-y-6">
             <div>
-              <label className="text-sm text-gray-600 font-['Plus_Jakarta_Sans'] mb-2 block">
-                Loan Title
-              </label>
-              <input
-                type="text"
-                value={loanTitle}
-                onChange={(e) => setLoanTitle(e.target.value)}
-                placeholder="Enter loan title"
-                className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 font-['Plus_Jakarta_Sans'] text-gray-900 focus:outline-none focus:border-[#4C82FB] transition-colors"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-600 font-['Plus_Jakarta_Sans'] mb-2 block">
-                Loan Description
-              </label>
-              <textarea
-                value={loanDescription}
-                onChange={(e) => setLoanDescription(e.target.value)}
-                placeholder="Enter loan description"
-                className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 font-['Plus_Jakarta_Sans'] text-gray-900 focus:outline-none focus:border-[#4C82FB] transition-colors"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-600 font-['Plus_Jakarta_Sans'] mb-2 block font-bold text-[#FF007A]">
+              <label className="text-sm text-gray-600 font-['Plus_Jakarta_Sans'] mb-2 block font-bold">
                 Invoice Number (Must Match Tax Data)
               </label>
               <input
@@ -315,7 +282,7 @@ export function BorrowerDashboard() {
                 value={invoiceNumber}
                 onChange={(e) => setInvoiceNumber(e.target.value)}
                 placeholder="e.g. INV-2024-001"
-                className="w-full bg-yellow-50 border border-yellow-200 rounded-2xl px-6 py-4 font-['Plus_Jakarta_Sans'] text-gray-900 focus:outline-none focus:border-[#4C82FB] transition-colors tracking-wide"
+                className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 font-['Plus_Jakarta_Sans'] text-gray-900 focus:outline-none focus:border-[#4C82FB] transition-colors tracking-wide"
               />
             </div>
 
@@ -337,16 +304,18 @@ export function BorrowerDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm text-gray-600 font-['Plus_Jakarta_Sans'] mb-2 block">
-                  Duration
+                  Duration (Days)
                 </label>
-                <select
+                <input
+                  type="number"
                   value={duration}
-                  onChange={(e) => setDuration(parseInt(e.target.value))}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4"
-                >
-                  <option value={30}>30 Days</option>
-                  <option value={60}>60 Days</option>
-                </select>
+                  onChange={(e) =>
+                    setDuration(
+                      e.target.value === "" ? "" : Number(e.target.value)
+                    )
+                  }
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 font-['Plus_Jakarta_Sans'] text-gray-900 focus:outline-none focus:border-[#4C82FB] transition-colors"
+                />
               </div>
               <div>
                 <label className="text-sm text-gray-600 font-['Plus_Jakarta_Sans'] mb-2 block">
@@ -358,7 +327,7 @@ export function BorrowerDashboard() {
                   onChange={(e) =>
                     setInterestRate(e.target.value.replace(/[^\d.]/g, ""))
                   }
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-4 font-['Plus_Jakarta_Sans'] text-gray-900 focus:outline-none focus:border-[#4C82FB] transition-colors"
                 />
               </div>
             </div>
@@ -408,7 +377,7 @@ export function BorrowerDashboard() {
           </div>
         </div>
 
-        {/* My Loans - UPDATED DESIGN 1:1 WITH IPFS LINK */}
+        {/* My Loans */}
         <div className="backdrop-blur-xl bg-white border border-gray-200 rounded-3xl p-8 lg:col-span-1 shadow-lg h-fit">
           <h2 className="font-['Outfit'] font-bold text-2xl mb-6 text-gray-900">
             My Loans
@@ -422,43 +391,41 @@ export function BorrowerDashboard() {
             )}
 
             {blockchainLoans.map((loan) => {
-              const statusConfig = getStatusConfig(loan.status);
+              const statusStyle = getStatusStyle(loan.status);
               const fundingProgress =
                 loan.amount > 0 ? (loan.fundedAmount / loan.amount) * 100 : 0;
+              const isFunded = loan.status === "funded"; // Maps to ACTIVE in SC
 
               return (
                 <div
                   key={loan.id}
                   className="bg-gray-50 border border-gray-200 rounded-2xl p-6 hover:border-gray-300 transition-colors"
                 >
-                  {/* Header Section */}
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <div className="font-['Outfit'] mb-1 text-gray-900 font-semibold">
-                        {loan.title}
+                        Invoice #{loan.invoiceNumber}
                       </div>
                       <div className="text-2xl font-['Outfit'] font-bold text-gray-900">
                         {loan.amount.toLocaleString()} IDRS
                       </div>
                     </div>
                     <div
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${statusConfig.color}`}
+                      style={{
+                        backgroundColor: statusStyle.bg,
+                        color: statusStyle.text,
+                      }}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-full"
                     >
-                      {statusConfig.icon}
+                      {statusStyle.icon}
                       <span className="text-xs font-['Plus_Jakarta_Sans'] font-medium">
-                        {statusConfig.label}
+                        {loan.status.charAt(0).toUpperCase() +
+                          loan.status.slice(1)}
                       </span>
                     </div>
                   </div>
 
-                  {/* Details Section */}
                   <div className="space-y-2 mb-4 text-sm font-['Plus_Jakarta_Sans']">
-                    <div className="flex justify-between text-gray-600">
-                      <span>Duration:</span>
-                      <span className="font-medium text-gray-900">
-                        {loan.duration} days
-                      </span>
-                    </div>
                     <div className="flex justify-between text-gray-600">
                       <span>Interest Rate:</span>
                       <span className="font-medium text-gray-900">
@@ -466,7 +433,17 @@ export function BorrowerDashboard() {
                       </span>
                     </div>
 
-                    {/* IPFS Integration */}
+                    <div className="flex justify-between text-gray-600">
+                      <span>
+                        {isFunded ? "Repayment Deadline:" : "Duration:"}
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {isFunded
+                          ? formatRepayDate(loan.startTime, loan.duration)
+                          : `${loan.duration / 86400} Days`}
+                      </span>
+                    </div>
+
                     {loan.ipfsHash && (
                       <div className="flex justify-between text-gray-600 items-center">
                         <span>Contract Document:</span>
@@ -477,17 +454,12 @@ export function BorrowerDashboard() {
                           className="flex items-center gap-1.5 text-[#4C82FB] hover:text-[#3867d6] hover:underline transition-colors font-medium cursor-pointer group"
                         >
                           <FileText size={14} />
-                          <span>View Invoice</span>
-                          <ExternalLink
-                            size={12}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          />
+                          <div>View Invoice</div>
                         </a>
                       </div>
                     )}
                   </div>
 
-                  {/* Funding Progress (if open/funded) */}
                   {(loan.status === "open" || loan.status === "funded") && (
                     <div className="mb-2">
                       <div className="flex justify-between text-xs text-gray-600 mb-1 font-['Plus_Jakarta_Sans']">
@@ -507,7 +479,6 @@ export function BorrowerDashboard() {
                     </div>
                   )}
 
-                  {/* Actions (if funded) */}
                   {loan.status === "funded" && (
                     <div className="flex gap-3 mt-4">
                       <button
