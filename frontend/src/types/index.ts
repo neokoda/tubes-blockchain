@@ -13,11 +13,12 @@ export interface Loan {
   amount: number;
   duration: number;
   interestRate: number;
-  status: 'verifying' | 'open' | 'funded' | 'repaid' | 'default';
+  status: 'verifying' | 'open' | 'funded' | 'repaid' | 'default' | 'rejected';
   fundedAmount: number;
   borrowerAddress: string;
   businessName: string;
   businessDescription: string;
-  invoiceUrl?: string;
+  ipfsHash?: string;
+  invoiceNumber: string;
   createdAt: number;
 }

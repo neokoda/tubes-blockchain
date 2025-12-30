@@ -8,7 +8,8 @@ contract InvoiceLending {
         PENDING,
         OPEN,
         ACTIVE,
-        CLOSED
+        CLOSED,
+        REJECTED
     }
 
     struct Loan {
@@ -75,7 +76,7 @@ contract InvoiceLending {
         if (_isValid) {
             loans[_loanId].state = LoanState.OPEN;
         } else {
-            loans[_loanId].state = LoanState.CLOSED;
+            loans[_loanId].state = LoanState.REJECTED;
         }
         emit LoanVerified(_loanId, _isValid);
     }

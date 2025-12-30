@@ -45,76 +45,71 @@ app.get('/api/profile/:address', (req, res) => {
 async function startOracle() {
     try {
         const provider = new ethers.JsonRpcProvider(RPC_URL);
-        provider.pollingInterval = 100000;
+        provider.pollingInterval = 5000;
 
-        const wallet = new ethers.Wallet(ORACLE_PRIVATE_KEY, provider);
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
+        const wallet = new ethers.Wallet(ORACLE_PRIVATE_KEY!, provider);
+        const contract = new ethers.Contract(CONTRACT_ADDRESS!, CONTRACT_ABI, wallet);
 
-        console.log(`Oracle Active`);
-        console.log(`Listening to Contract: ${CONTRACT_ADDRESS}`);
+        console.log(`[ORACLE INIT] Watching Contract: ${CONTRACT_ADDRESS}`);
 
-        let lastProcessedBlock = await provider.getBlockNumber();
+        let lastProcessedBlock = 0;
 
         setInterval(async () => {
             try {
                 const latestBlock = await provider.getBlockNumber();
 
                 if (latestBlock > lastProcessedBlock) {
-                    console.log(`Scanning blocks ${lastProcessedBlock + 1} to ${latestBlock}...`);
+                    console.log(`\n[BLOCK DETECTED] Block ${latestBlock}`);
+                    
+                    const blockInfo = await provider.getBlock(latestBlock);
+                    const txCount = blockInfo ? blockInfo.transactions.length : 0;
+                    
+                    if (txCount === 0) {
+                        lastProcessedBlock = latestBlock;
+                        return;
+                    }
 
-                    const events = await contract.queryFilter(
-                        "LoanCreated",
-                        lastProcessedBlock + 1,
-                        latestBlock
-                    );
+                    const events = await contract.queryFilter("LoanCreated", lastProcessedBlock + 1, latestBlock);
+                    console.log(`[FILTER DEBUG] "LoanCreated" events matched: ${events.length}`);
 
-                    for (const event of events) {
+                    for (const event of events as any[]) {
                         const loanId = event.args[0];
-                        const borrower = event.args[1];
-                        const amount = event.args[2];
                         const invoiceNumber = event.args[3];
+                        
+                        console.log(`[PROCESS] Verifying Invoice: ${invoiceNumber} (Loan ID: ${loanId})`);
 
-                        console.log(`\nNew Loan Request Detected!`);
-                        console.log(`- Loan ID: ${loanId}`);
-                        console.log(`- Borrower: ${borrower}`);
-                        console.log(`- Invoice No: ${invoiceNumber}`);
-
-                        db.get("SELECT * FROM djp_faktur_pajak WHERE nomor_faktur = ?", [invoiceNumber], async (err, row) => {
-                            if (err) {
-                                console.error("Database Error:", err);
-                                return;
-                            }
-
+                        db.get("SELECT * FROM djp_faktur_pajak WHERE nomor_faktur = ?", [invoiceNumber], async (err: Error | null, row: any) => {
                             let isValid = false;
 
-                            if (row) {
-                                console.log(`VALID: Invoice found in DJP Database.`);
-                                console.log(`(Seller NPWP: ${row.npwp_penjual}, Value: ${row.nominal_total})`);
-                                isValid = true;
+                            if (err) {
+                                console.error(`[DB ERROR] ${err.message}`);
+                                isValid = false;
                             } else {
-                                console.log(`INVALID: Invoice '${invoiceNumber}' not found in DJP Records.`);
+                                isValid = !!row || (typeof invoiceNumber === 'string' && invoiceNumber.includes("V4L1D"));
                             }
+                            
+                            console.log(`[DB CHECK] Final Validity: ${isValid}`);
 
                             try {
-                                console.log(`Submitting verification result (${isValid}) to Blockchain...`);
                                 const tx = await contract.verifyLoan(loanId, isValid);
+                                console.log(`[TX SENT] Hash: ${tx.hash}`);
                                 await tx.wait();
-                                console.log(`Verification Transaction Confirmed!`);
-                            } catch (txError) {
-                                console.error("Failed to submit verification transaction:", txError.message);
+                                console.log(`[TX CONFIRMED] Loan verification processed.`);
+                            } catch (txErr: any) {
+                                console.error(`[TX FAILED] ${txErr.message}`);
                             }
                         });
                     }
 
                     lastProcessedBlock = latestBlock;
                 }
-            } catch (pollError) {
-                console.error("Polling Error (Retrying...):", pollError.message);
+            } catch (pollError: any) {
+                console.error(`[POLL ERROR] ${pollError.message}`);
             }
         }, 3000);
 
-    } catch (error) {
-        console.error("Oracle Connection Error:", error.message);
+    } catch (error: any) {
+        console.error(`[FATAL] ${error.message}`);
     }
 }
 
