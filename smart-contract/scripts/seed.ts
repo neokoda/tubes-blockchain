@@ -18,17 +18,17 @@ async function main() {
   );
 
   const loanId = (await lending.nextLoanId()) - 1n;
-  console.log("🆕 New Loan ID:", loanId.toString());
+  console.log("New Loan ID:", loanId.toString());
 
   await lending.connect(oracle).verifyLoan(loanId, true);
-  console.log("🔍 Loan verified");
+  console.log("Loan verified");
 
   await token.faucet(investorA.address, ethers.parseEther("50000000"));
 
   await token.connect(investorA).approve(LENDING_ADDRESS, ethers.parseEther("40000000"));
   await lending.connect(investorA).fundLoan(loanId, ethers.parseEther("40000000"));
 
-  console.log("✅ Loan created - 40M funded, 60M remaining");
+  console.log("Loan created - 40M funded, 60M remaining");
 }
 
 main().catch(console.error);

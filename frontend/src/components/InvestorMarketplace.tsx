@@ -59,7 +59,8 @@ export function InvestorMarketplace() {
             Connect Your Wallet
           </h2>
           <p className="text-gray-600 font-['Plus_Jakarta_Sans'] text-center max-w-md">
-            Connect your wallet to view and invest in available loan opportunities
+            Connect your wallet to view and invest in available loan
+            opportunities
           </p>
         </div>
       </div>
@@ -68,7 +69,7 @@ export function InvestorMarketplace() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
-      <div className="flex items-center justify-between mb-8">
+      {/* <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-['Outfit'] font-bold text-gray-900 mb-2">
             Investment Marketplace
@@ -96,7 +97,7 @@ export function InvestorMarketplace() {
             <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
         </div>
-      </div>
+      </div> */}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -171,7 +172,9 @@ export function InvestorMarketplace() {
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                       <div
-                        className={`text-xl font-['Outfit'] font-bold ${getScoreColor(score)}`}
+                        className={`text-xl font-['Outfit'] font-bold ${getScoreColor(
+                          score
+                        )}`}
                       >
                         {score}
                       </div>
