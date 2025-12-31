@@ -1,4 +1,3 @@
-// useBlockchain.ts
 import { ethers } from "ethers";
 import { useEffect, useState } from "react";
 
@@ -6,18 +5,17 @@ const LENDING_CONTRACT_ADDRESS = import.meta.env.VITE_INVOICE_LENDING_ADDRESS;
 const TOKEN_CONTRACT_ADDRESS = import.meta.env.VITE_IDRS_CONTRACT_ADDRESS;
 
 const LENDING_ABI = [
-    "function nextLoanId() view returns (uint256)",
-    "function loans(uint256) view returns (uint256 id, address borrower, uint256 amountRequested, uint256 amountFunded, string ipfsHash, string invoiceNumber, uint256 interestRate, uint8 state)",
-    "function fundLoan(uint256 _loanId, uint256 _amount) external",
-    "function createLoanRequest(uint256 _amount, uint256 _interest, string memory _ipfsHash, string memory _invoiceNumber) external",
-    "function withdrawFunds(uint256 _loanId) external",
-    "function repayLoan(uint256 _loanId) external",
-    "function getInvestors(uint256 _loanId) view returns (address[])",
-    "event LoanCreated(uint256 loanId, address borrower, uint256 amount, string invoiceNumber)",
-    "event Funded(uint256 loanId, address investor, uint256 amount)",
-    "event Disbursed(uint256 loanId, uint256 amount)",
-    "event Repaid(uint256 loanId, uint256 amount)"
-  ];
+  "function nextLoanId() view returns (uint256)",
+  "function loans(uint256) view returns (uint256 id, address borrower, uint256 amountRequested, uint256 amountFunded, string ipfsHash, string invoiceNumber, uint256 interestRate, uint8 state)",
+  "function fundLoan(uint256 _loanId, uint256 _amount) external",
+  "function createLoanRequest(uint256 _amount, uint256 _interest, string memory _ipfsHash, string memory _invoiceNumber) external",
+  "function withdrawFunds(uint256 _loanId) external",
+  "function repayLoan(uint256 _loanId) external",
+  "event LoanCreated(uint256 loanId, address borrower, uint256 amount, string invoiceNumber)",
+  "event Funded(uint256 loanId, address investor, uint256 amount)",
+  "event Disbursed(uint256 loanId, uint256 amount)",
+  "event Repaid(uint256 loanId, uint256 amount)"
+];
 
 const TOKEN_ABI = [
   "function approve(address spender, uint256 amount) external returns (bool)",
@@ -38,7 +36,6 @@ export const useBlockchain = () => {
     if (window.ethereum) {
       const prov = new ethers.BrowserProvider(window.ethereum);
       setProvider(prov);
-      
       checkConnection(prov);
     }
   }, []);
@@ -59,7 +56,6 @@ export const useBlockchain = () => {
         
         setLendingContract(lending);
         setTokenContract(token);
-
       }
     } catch (error) {
       console.log("No existing connection");
@@ -110,7 +106,6 @@ export const useBlockchain = () => {
       );
   
       const loanCounter = await readOnlyContract.nextLoanId();
-      
       const loans = [];
   
       for (let id = 1; id < Number(loanCounter); id++) {
@@ -121,15 +116,18 @@ export const useBlockchain = () => {
             continue;
           }
   
-          let investors: string[] = [];
-          try {
-            investors = await readOnlyContract.getInvestors(id);
-          } catch (e) {
-            console.log(`Could not fetch investors for loan ${id}`);
-          }
-  
-          const statusMap = ["pending", "open", "active", "closed"];
+          const stateNum = Number(loan.state);
+          console.log(`🔍 Loan ${id} raw state:`, loan.state, "Number:", stateNum);
           
+          let status = "pending";
+          
+          if (stateNum === 0) status = "pending";
+          else if (stateNum === 1) status = "open";
+          else if (stateNum === 2) status = "active";
+          else if (stateNum === 3) status = "closed";
+  
+          console.log(`🔍 Loan ${id} mapped status:`, status);
+  
           loans.push({
             id: id.toString(),
             borrowerAddress: loan.borrower,
@@ -137,18 +135,18 @@ export const useBlockchain = () => {
             fundedAmount: parseFloat(ethers.formatEther(loan.amountFunded)),
             interestRate: Number(loan.interestRate),
             duration: 30,
-            status: statusMap[Number(loan.state)],
+            status: status,
             ipfsHash: loan.ipfsHash,
             invoiceNumber: loan.invoiceNumber,
-            investors: investors
+            investors: []
           });
         } catch (error) {
-          console.error(`❌ Error fetching loan ${id}:`, error);
+          console.error(`Error fetching loan ${id}:`, error);
         }
       }
       return loans;
     } catch (error) {
-      console.error("❌ Error fetching loans:", error);
+      console.error("Error fetching loans:", error);
       return [];
     }
   };

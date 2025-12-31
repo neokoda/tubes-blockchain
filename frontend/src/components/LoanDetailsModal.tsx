@@ -27,11 +27,6 @@ export function LoanDetailsModal({
   const maxFundAmount = Math.min(remainingAmount, balance);
   const fundingProgress = (loan.fundedAmount / loan.amount) * 100;
 
-  console.log("Loan amount:", loan.amount);
-  console.log("Funded amount:", loan.fundedAmount);
-  console.log("Remaining:", remainingAmount);
-  console.log("Balance:", balance);
-
   const estimatedReturn = fundAmount
     ? (parseFloat(fundAmount) * (1 + loan.interestRate / 100)).toFixed(2)
     : "0";
@@ -81,7 +76,7 @@ export function LoanDetailsModal({
         <div className="p-8">
           <div className="flex items-center gap-2 mb-2">
             <h2 className="font-['Outfit'] font-extrabold text-3xl text-gray-900">
-              Loan #{loan.id}
+              {loan.businessName || "Business Loan"}
             </h2>
             <div className="flex items-center gap-1 px-2 py-1 bg-[#50E3C2]/20 rounded-full">
               <CheckCircle2 className="w-3 h-3 text-[#50E3C2]" />
@@ -91,7 +86,7 @@ export function LoanDetailsModal({
             </div>
           </div>
           <p className="text-gray-600 font-['Plus_Jakarta_Sans'] mb-8">
-            Invoice: {loan.invoiceNumber}
+            {loan.businessDescription || `Invoice: ${loan.invoiceNumber}`}
           </p>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -110,6 +105,11 @@ export function LoanDetailsModal({
                     </div>
                   </div>
                 </div>
+                {loan.businessDescription && (
+                  <p className="text-sm text-gray-600 font-['Plus_Jakarta_Sans']">
+                    {loan.businessDescription}
+                  </p>
+                )}
               </div>
 
               <div className="backdrop-blur-xl bg-gray-50 border border-gray-200 rounded-2xl p-6">
@@ -127,8 +127,8 @@ export function LoanDetailsModal({
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-center">
-                  <div className="text-center">
+                <div className="bg-white border border-gray-200 rounded-xl p-4">
+                  <div className="text-center mb-4">
                     <FileText className="w-16 h-16 mx-auto mb-3 text-gray-400" />
                     <div className="text-sm text-gray-600 font-['Plus_Jakarta_Sans']">
                       Invoice #{loan.invoiceNumber}
@@ -137,6 +137,18 @@ export function LoanDetailsModal({
                       IPFS: {loan.ipfsHash.slice(0, 15)}...
                     </div>
                   </div>
+                  
+                  {loan.ipfsHash && (<a
+                    
+                      href={`https://gateway.pinata.cloud/ipfs/${loan.ipfsHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full py-2 px-4 bg-[#4C82FB] hover:bg-[#3867d6] text-white rounded-xl transition-colors font-['Plus_Jakarta_Sans'] font-semibold text-sm"
+                    >
+                      <FileText className="w-4 h-4" />
+                      View Invoice Document
+                    </a>
+                  )}
                 </div>
               </div>
 

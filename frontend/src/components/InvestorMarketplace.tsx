@@ -33,8 +33,11 @@ export function InvestorMarketplace() {
   };
 
   const openLoans = loans.filter(
-    (l) => l.status === "open" || l.status === "active"
+    (l) => l.fundedAmount < l.amount
   );
+  loans.forEach(l => {
+    console.log(`Loan ${l.id}: status=${l.status}, funded=${l.fundedAmount}, amount=${l.amount}, passes=${(l.status === "open" || l.status === "active") && l.fundedAmount < l.amount}`);
+  });
 
   const getScoreColor = (score: number) => {
     if (score >= 800) return "text-[#50E3C2]";
@@ -59,8 +62,7 @@ export function InvestorMarketplace() {
             Connect Your Wallet
           </h2>
           <p className="text-gray-600 font-['Plus_Jakarta_Sans'] text-center max-w-md">
-            Connect your wallet to view and invest in available loan
-            opportunities
+            Connect your wallet to view and invest in available loan opportunities
           </p>
         </div>
       </div>
@@ -69,36 +71,6 @@ export function InvestorMarketplace() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
-      {/* <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-['Outfit'] font-bold text-gray-900 mb-2">
-            Investment Marketplace
-          </h1>
-          <p className="text-gray-600 font-['Plus_Jakarta_Sans']">
-            Connected: {address.slice(0, 6)}...{address.slice(-4)}
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="bg-white border border-gray-200 rounded-2xl px-6 py-3">
-            <div className="text-sm text-gray-600 font-['Plus_Jakarta_Sans'] mb-1">
-              Your Balance
-            </div>
-            <div className="text-xl font-['Outfit'] font-bold text-gray-900">
-              {parseFloat(walletBalance).toLocaleString()} IDRS
-            </div>
-          </div>
-          
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing || loading}
-            className="p-3 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-      </div> */}
-
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <RefreshCw className="w-8 h-8 animate-spin text-[#4C82FB]" />
@@ -172,9 +144,7 @@ export function InvestorMarketplace() {
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                       <div
-                        className={`text-xl font-['Outfit'] font-bold ${getScoreColor(
-                          score
-                        )}`}
+                        className={`text-xl font-['Outfit'] font-bold ${getScoreColor(score)}`}
                       >
                         {score}
                       </div>
