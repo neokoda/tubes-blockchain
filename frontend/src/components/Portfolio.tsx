@@ -1,58 +1,85 @@
-import { useState } from 'react';
-import { TrendingUp, DollarSign, PieChart } from 'lucide-react';
+import { ethers } from 'ethers';
+import { DollarSign, PieChart, TrendingUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useData } from '../context/DataContext';
+import { useWallet } from '../context/WalletContext';
 
 interface Investment {
-  projectId: string;
+  loanId: string;
   amountInvested: number;
   interestEarned: number;
   status: 'active' | 'repaid';
   apr: number;
   daysRemaining: number;
+  borrower: string;
+  invoiceNumber: string;
 }
 
-const mockInvestments: Investment[] = [
-  {
-    projectId: 'L001',
-    amountInvested: 50000000,
-    interestEarned: 4500000,
-    status: 'active',
-    apr: 12,
-    daysRemaining: 15,
-  },
-  {
-    projectId: 'L005',
-    amountInvested: 30000000,
-    interestEarned: 2100000,
-    status: 'active',
-    apr: 10.5,
-    daysRemaining: 42,
-  },
-  {
-    projectId: 'L003',
-    amountInvested: 25000000,
-    interestEarned: 2875000,
-    status: 'repaid',
-    apr: 11.5,
-    daysRemaining: 0,
-  },
-  {
-    projectId: 'L002',
-    amountInvested: 40000000,
-    interestEarned: 4000000,
-    status: 'repaid',
-    apr: 10,
-    daysRemaining: 0,
-  },
-];
-
 export function Portfolio() {
-  const [investments] = useState<Investment[]>(mockInvestments);
+  const { address, provider } = useWallet();
+  const { loans } = useData();
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (address && provider && loans.length > 0) {
+      fetchMyInvestments();
+    }
+  }, [address, provider, loans]);
+
+  const fetchMyInvestments = async () => {
+    setLoading(true);
+    try {
+      const myInvestments: Investment[] = [];
+
+      const LENDING_ABI = [
+        "function contributions(uint256, address) view returns (uint256)"
+      ];
+      
+      const contract = new ethers.Contract(
+        import.meta.env.VITE_INVOICE_LENDING_ADDRESS,
+        LENDING_ABI,
+        provider!
+      );
+
+      for (const loan of loans) {
+        try {
+          const myContribution = await contract.contributions(loan.id, address);
+          const invested = parseFloat(ethers.formatEther(myContribution));
+
+          if (invested > 0) {
+            const interest = (invested * loan.interestRate) / 100;
+            
+            let status: 'active' | 'repaid' = 'active';
+            if (loan.status === 'closed') status = 'repaid';
+
+            myInvestments.push({
+              loanId: loan.id,
+              amountInvested: invested,
+              interestEarned: interest,
+              status: status,
+              apr: loan.interestRate,
+              daysRemaining: loan.duration,
+              borrower: loan.borrowerAddress,
+              invoiceNumber: loan.invoiceNumber
+            });
+          }
+        } catch (error) {
+          console.log(`Could not fetch contribution for loan ${loan.id}:`, error);
+        }
+      }
+      setInvestments(myInvestments);
+    } catch (error) {
+      console.error('Error fetching investments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const totalLent = investments.reduce((sum, inv) => sum + inv.amountInvested, 0);
   const totalEarned = investments.reduce((sum, inv) => sum + inv.interestEarned, 0);
   const activeInvestments = investments.filter(inv => inv.status === 'active').length;
 
-  // Mock chart data for Total Value Locked over time
   const chartData = [
     { month: 'Jan', value: 20 },
     { month: 'Feb', value: 35 },
@@ -66,9 +93,23 @@ export function Portfolio() {
 
   const maxValue = Math.max(...chartData.map(d => d.value));
 
+  if (!address) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+          <h2 className="text-3xl font-['Outfit'] font-bold text-gray-900">
+            Connect Your Wallet
+          </h2>
+          <p className="text-gray-600 font-['Plus_Jakarta_Sans'] text-center max-w-md">
+            Connect your wallet to view your investment portfolio
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="backdrop-blur-xl bg-white border border-gray-200 rounded-3xl p-6 hover:border-gray-300 transition-colors shadow-lg">
           <div className="flex items-center gap-3 mb-4">
@@ -110,7 +151,6 @@ export function Portfolio() {
         </div>
       </div>
 
-      {/* Total Value Locked Chart */}
       <div className="backdrop-blur-xl bg-white border border-gray-200 rounded-3xl p-8 mb-8 shadow-lg">
         <h2 className="font-['Outfit'] font-bold text-2xl mb-6 text-gray-900">Total Value Locked</h2>
         
@@ -138,69 +178,86 @@ export function Portfolio() {
         </div>
       </div>
 
-      {/* Investment Table */}
       <div className="backdrop-blur-xl bg-white border border-gray-200 rounded-3xl p-8 shadow-lg">
         <h2 className="font-['Outfit'] font-bold text-2xl mb-6 text-gray-900">My Investments</h2>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-4 px-4 text-sm text-gray-600 font-['Plus_Jakarta_Sans'] font-semibold">
-                  Project ID
-                </th>
-                <th className="text-right py-4 px-4 text-sm text-gray-600 font-['Plus_Jakarta_Sans'] font-semibold">
-                  Amount Invested
-                </th>
-                <th className="text-right py-4 px-4 text-sm text-gray-600 font-['Plus_Jakarta_Sans'] font-semibold">
-                  APR
-                </th>
-                <th className="text-right py-4 px-4 text-sm text-gray-600 font-['Plus_Jakarta_Sans'] font-semibold">
-                  Interest Earned
-                </th>
-                <th className="text-right py-4 px-4 text-sm text-gray-600 font-['Plus_Jakarta_Sans'] font-semibold">
-                  Status
-                </th>
-                <th className="text-right py-4 px-4 text-sm text-gray-600 font-['Plus_Jakarta_Sans'] font-semibold">
-                  Days Remaining
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {investments.map((investment, index) => (
-                <tr
-                  key={index}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                >
-                  <td className="py-4 px-4 font-['Outfit'] font-semibold text-gray-900">{investment.projectId}</td>
-                  <td className="py-4 px-4 text-right font-['Plus_Jakarta_Sans'] text-gray-900">
-                    {investment.amountInvested.toLocaleString()} IDRS
-                  </td>
-                  <td className="py-4 px-4 text-right font-['Plus_Jakarta_Sans'] text-gray-900">
-                    {investment.apr}%
-                  </td>
-                  <td className="py-4 px-4 text-right text-[#50E3C2] font-['Plus_Jakarta_Sans'] font-semibold">
-                    +{investment.interestEarned.toLocaleString()} IDRS
-                  </td>
-                  <td className="py-4 px-4 text-right">
-                    {investment.status === 'active' ? (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#4C82FB]/20 text-[#4C82FB] rounded-full text-xs font-['Plus_Jakarta_Sans'] font-semibold">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#50E3C2]/20 text-[#50E3C2] rounded-full text-xs font-['Plus_Jakarta_Sans'] font-semibold">
-                        ✓ Repaid
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-4 px-4 text-right font-['Plus_Jakarta_Sans'] text-gray-900">
-                    {investment.status === 'active' ? `${investment.daysRemaining} days` : '-'}
-                  </td>
+        {loading ? (
+          <div className="text-center py-20">
+            <p className="text-gray-600 font-['Plus_Jakarta_Sans']">Loading investments...</p>
+          </div>
+        ) : investments.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-gray-600 font-['Plus_Jakarta_Sans']">No investments yet</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-4 px-4 text-sm text-gray-600 font-['Plus_Jakarta_Sans'] font-semibold">
+                    Loan ID
+                  </th>
+                  <th className="text-left py-4 px-4 text-sm text-gray-600 font-['Plus_Jakarta_Sans'] font-semibold">
+                    Invoice
+                  </th>
+                  <th className="text-right py-4 px-4 text-sm text-gray-600 font-['Plus_Jakarta_Sans'] font-semibold">
+                    Amount Invested
+                  </th>
+                  <th className="text-right py-4 px-4 text-sm text-gray-600 font-['Plus_Jakarta_Sans'] font-semibold">
+                    APR
+                  </th>
+                  <th className="text-right py-4 px-4 text-sm text-gray-600 font-['Plus_Jakarta_Sans'] font-semibold">
+                    Interest Earned
+                  </th>
+                  <th className="text-right py-4 px-4 text-sm text-gray-600 font-['Plus_Jakarta_Sans'] font-semibold">
+                    Status
+                  </th>
+                  <th className="text-right py-4 px-4 text-sm text-gray-600 font-['Plus_Jakarta_Sans'] font-semibold">
+                    Days Remaining
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {investments.map((investment, index) => (
+                  <tr
+                    key={index}
+                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="py-4 px-4 font-['Outfit'] font-semibold text-gray-900">
+                      #{investment.loanId}
+                    </td>
+                    <td className="py-4 px-4 font-['Plus_Jakarta_Sans'] text-gray-900">
+                      {investment.invoiceNumber}
+                    </td>
+                    <td className="py-4 px-4 text-right font-['Plus_Jakarta_Sans'] text-gray-900">
+                      {investment.amountInvested.toLocaleString()} IDRS
+                    </td>
+                    <td className="py-4 px-4 text-right font-['Plus_Jakarta_Sans'] text-gray-900">
+                      {investment.apr}%
+                    </td>
+                    <td className="py-4 px-4 text-right text-[#50E3C2] font-['Plus_Jakarta_Sans'] font-semibold">
+                      +{investment.interestEarned.toLocaleString()} IDRS
+                    </td>
+                    <td className="py-4 px-4 text-right">
+                      {investment.status === 'active' ? (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#4C82FB]/20 text-[#4C82FB] rounded-full text-xs font-['Plus_Jakarta_Sans'] font-semibold">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#50E3C2]/20 text-[#50E3C2] rounded-full text-xs font-['Plus_Jakarta_Sans'] font-semibold">
+                          ✓ Repaid
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-4 px-4 text-right font-['Plus_Jakarta_Sans'] text-gray-900">
+                      {investment.status === 'active' ? `${investment.daysRemaining} days` : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
