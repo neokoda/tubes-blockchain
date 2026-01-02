@@ -18,7 +18,7 @@ const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
 const RPC_URL = process.env.RPC_URL;
 
 const CONTRACT_ABI = [
-    "event LoanCreated(uint256 loanId, address borrower, uint256 amount, string invoiceNumber)",
+    "event LoanCreated(uint256 loanId, address borrower, uint256 amount, string invoiceNumber, uint256 duration)",
     "function verifyLoan(uint256 _loanId, bool _isValid) external",
     "function loans(uint256) view returns (uint256 id, address borrower, uint256 amountRequested, uint256 amountFunded, string ipfsHash, string invoiceNumber, uint256 interestRate, uint8 state, address[] investors)"
 ];
@@ -60,10 +60,10 @@ async function startOracle() {
 
                 if (latestBlock > lastProcessedBlock) {
                     console.log(`\n[BLOCK DETECTED] Block ${latestBlock}`);
-                    
+
                     const blockInfo = await provider.getBlock(latestBlock);
                     const txCount = blockInfo ? blockInfo.transactions.length : 0;
-                    
+
                     if (txCount === 0) {
                         lastProcessedBlock = latestBlock;
                         return;
@@ -75,7 +75,7 @@ async function startOracle() {
                     for (const event of events as any[]) {
                         const loanId = event.args[0];
                         const invoiceNumber = event.args[3];
-                        
+
                         console.log(`[PROCESS] Verifying Invoice: ${invoiceNumber} (Loan ID: ${loanId})`);
 
                         db.get("SELECT * FROM djp_faktur_pajak WHERE nomor_faktur = ?", [invoiceNumber], async (err: Error | null, row: any) => {
@@ -87,7 +87,7 @@ async function startOracle() {
                             } else {
                                 isValid = !!row || (typeof invoiceNumber === 'string' && invoiceNumber.includes("V4L1D"));
                             }
-                            
+
                             console.log(`[DB CHECK] Final Validity: ${isValid}`);
 
                             try {
