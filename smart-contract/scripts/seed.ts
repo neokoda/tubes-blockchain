@@ -15,7 +15,7 @@ async function main() {
   console.log("📝 Creating loan request...");
   await lending.connect(umkm).createLoanRequest(
     loanAmt,
-    10,
+    1000,
     duration,
     "QmDummyIPFS",
     "DUMMY-INV-002"
@@ -37,7 +37,7 @@ async function main() {
 
   console.log("✅ Approving tokens...");
   await token.connect(investorA).approve(LENDING_ADDRESS, ethers.parseEther("40000000"));
-  
+
   console.log("💸 Funding loan with 40M...");
   await lending.connect(investorA).fundLoan(loanId, ethers.parseEther("40000000"));
 

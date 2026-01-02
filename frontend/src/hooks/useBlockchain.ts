@@ -46,14 +46,14 @@ export const useBlockchain = () => {
       if (accounts.length > 0) {
         const sign = await prov.getSigner();
         const addr = await sign.getAddress();
-        
+
         setSigner(sign);
         setAccount(addr);
         setIsConnected(true);
 
         const lending = new ethers.Contract(LENDING_CONTRACT_ADDRESS, LENDING_ABI, sign);
         const token = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, TOKEN_ABI, sign);
-        
+
         setLendingContract(lending);
         setTokenContract(token);
       }
@@ -65,18 +65,18 @@ export const useBlockchain = () => {
   const connectWallet = async () => {
     try {
       if (!provider) throw new Error("No provider found");
-      
+
       await window.ethereum.request({ method: 'eth_requestAccounts' });
       const sign = await provider.getSigner();
       const addr = await sign.getAddress();
-      
+
       setSigner(sign);
       setAccount(addr);
       setIsConnected(true);
 
       const lending = new ethers.Contract(LENDING_CONTRACT_ADDRESS, LENDING_ABI, sign);
       const token = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, TOKEN_ABI, sign);
-      
+
       setLendingContract(lending);
       setTokenContract(token);
 
@@ -98,36 +98,36 @@ export const useBlockchain = () => {
   const fetchLoans = async () => {
     try {
       if (!provider) throw new Error("No provider");
-  
+
       const readOnlyContract = new ethers.Contract(
         LENDING_CONTRACT_ADDRESS,
         LENDING_ABI,
         provider
       );
-  
+
       const loanCounter = await readOnlyContract.nextLoanId();
       const loans = [];
-  
+
       for (let id = 1; id < Number(loanCounter); id++) {
         try {
           const loan = await readOnlyContract.loans(id);
-          
+
           if (loan.borrower === ethers.ZeroAddress) {
             continue;
           }
-  
+
           const stateNum = Number(loan.state);
           console.log(`🔍 Loan ${id} raw state:`, loan.state, "Number:", stateNum);
-          
+
           let status = "pending";
-          
+
           if (stateNum === 0) status = "pending";
           else if (stateNum === 1) status = "open";
           else if (stateNum === 2) status = "active";
           else if (stateNum === 3) status = "closed";
-  
+
           console.log(`🔍 Loan ${id} mapped status:`, status);
-  
+
           loans.push({
             id: id.toString(),
             borrowerAddress: loan.borrower,
@@ -159,7 +159,7 @@ export const useBlockchain = () => {
 
       const amountWei = ethers.parseEther(amount.toString());
       const allowance = await tokenContract.allowance(account, LENDING_CONTRACT_ADDRESS);
-      
+
       if (allowance < amountWei) {
         const approveTx = await tokenContract.approve(LENDING_CONTRACT_ADDRESS, amountWei);
         await approveTx.wait();
@@ -167,7 +167,7 @@ export const useBlockchain = () => {
 
       const fundTx = await lendingContract.fundLoan(loanId, amountWei);
       const receipt = await fundTx.wait();
-      
+
       return receipt;
     } catch (error) {
       console.error("Funding error:", error);
@@ -188,7 +188,7 @@ export const useBlockchain = () => {
         ipfsHash,
         invoiceNumber
       );
-      
+
       const receipt = await tx.wait();
       return receipt;
     } catch (error) {
@@ -219,8 +219,9 @@ export const useBlockchain = () => {
       }
 
       const loan = await lendingContract.loans(loanId);
-      const totalRepayment = loan.amountRequested + 
-        (loan.amountRequested * BigInt(loan.interestRate) / BigInt(100));
+
+      const interestAmount = (loan.amountRequested * BigInt(loan.interestRate)) / 10000n;
+      const totalRepayment = loan.amountRequested + interestAmount;
 
       const approveTx = await tokenContract.approve(LENDING_CONTRACT_ADDRESS, totalRepayment);
       await approveTx.wait();
@@ -237,7 +238,7 @@ export const useBlockchain = () => {
   const getTokenBalance = async (address: string) => {
     try {
       if (!tokenContract) throw new Error("Token contract not initialized");
-      
+
       const balance = await tokenContract.balanceOf(address);
       return parseFloat(ethers.formatEther(balance));
     } catch (error) {
@@ -260,7 +261,7 @@ export const useBlockchain = () => {
       const amountWei = ethers.parseEther(amount.toString());
       const tx = await tokenContract.faucet(account, amountWei);
       const receipt = await tx.wait();
-      
+
       return receipt;
     } catch (error: any) {
       console.error("Faucet claim error:", error);

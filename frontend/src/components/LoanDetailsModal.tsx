@@ -28,7 +28,7 @@ export function LoanDetailsModal({
   const fundingProgress = (loan.fundedAmount / loan.amount) * 100;
 
   const estimatedReturn = fundAmount
-    ? (parseFloat(fundAmount) * (1 + loan.interestRate / 100)).toFixed(2)
+    ? (parseFloat(fundAmount) * (1 + loan.interestRate / 10000)).toFixed(2)
     : "0";
 
   const handleFund = async () => {
