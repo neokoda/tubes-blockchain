@@ -91,7 +91,22 @@ export function InvestorMarketplace() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {openLoans.map((loan) => {
             const fundingProgress = (loan.fundedAmount / loan.amount) * 100;
-            const score = 750;
+            const borrowerHistory = loans.filter(
+              (l) =>
+                l.borrowerAddress.toLowerCase() === loan.borrowerAddress.toLowerCase() &&
+                (l.status === "closed" || l.status === "repaid")
+            );
+
+            const baseScore = 600;
+            const pointsPerRepayment = 50;
+            const maxScore = 850;
+
+            const calculatedScore = Math.min(
+              maxScore,
+              baseScore + (borrowerHistory.length * pointsPerRepayment)
+            );
+
+            const score = calculatedScore;
             const scoreRing = getScoreRing(score);
 
             return (
@@ -203,7 +218,7 @@ export function InvestorMarketplace() {
         <LoanDetailsModal
           loan={selectedLoan}
           balance={parseFloat(walletBalance)}
-          setBalance={() => {}}
+          setBalance={() => { }}
           onClose={() => setSelectedLoan(null)}
           onFundingComplete={handleFundingComplete}
         />
