@@ -139,10 +139,11 @@ export function BorrowerDashboard() {
 
       const amountWei = ethers.parseUnits(loanAmount, 18);
       const durationSeconds = Number(duration) * 24 * 60 * 60; // Convert days to seconds
+      const interestBps = Math.round(parseFloat(interestRate) * 100);
 
       const tx = await contract.createLoanRequest(
         amountWei,
-        interestRate,
+        interestBps,
         durationSeconds,
         ipfsHash,
         invoiceNumber
@@ -429,7 +430,7 @@ export function BorrowerDashboard() {
                     <div className="flex justify-between text-gray-600">
                       <span>Interest Rate:</span>
                       <span className="font-medium text-gray-900">
-                        {loan.interestRate}%
+                        {loan.interestRate / 100}%
                       </span>
                     </div>
 

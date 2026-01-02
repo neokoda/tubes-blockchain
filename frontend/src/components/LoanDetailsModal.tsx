@@ -137,17 +137,17 @@ export function LoanDetailsModal({
                       IPFS: {loan.ipfsHash.slice(0, 15)}...
                     </div>
                   </div>
-                  
+
                   {loan.ipfsHash && (<a
-                    
-                      href={`https://gateway.pinata.cloud/ipfs/${loan.ipfsHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full py-2 px-4 bg-[#4C82FB] hover:bg-[#3867d6] text-white rounded-xl transition-colors font-['Plus_Jakarta_Sans'] font-semibold text-sm"
-                    >
-                      <FileText className="w-4 h-4" />
-                      View Invoice Document
-                    </a>
+
+                    href={`https://gateway.pinata.cloud/ipfs/${loan.ipfsHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full py-2 px-4 bg-[#4C82FB] hover:bg-[#3867d6] text-white rounded-xl transition-colors font-['Plus_Jakarta_Sans'] font-semibold text-sm"
+                  >
+                    <FileText className="w-4 h-4" />
+                    View Invoice Document
+                  </a>
                   )}
                 </div>
               </div>
@@ -179,7 +179,7 @@ export function LoanDetailsModal({
                     <span className="text-gray-600">APR</span>
                     <span className="text-[#50E3C2] flex items-center gap-1 font-semibold">
                       <TrendingUp className="w-4 h-4" />
-                      {loan.interestRate}%
+                      {loan.interestRate / 100}%
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -228,11 +228,10 @@ export function LoanDetailsModal({
                       onChange={(e) => setFundAmount(e.target.value)}
                       max={maxFundAmount}
                       placeholder="0"
-                      className={`w-full bg-white border ${
-                        fundAmount && parseFloat(fundAmount) > maxFundAmount
-                          ? "border-red-500"
-                          : "border-gray-200"
-                      } rounded-2xl px-6 py-4 text-left text-2xl font-['Outfit'] text-gray-900 focus:outline-none focus:border-[#4C82FB] transition-colors`}
+                      className={`w-full bg-white border ${fundAmount && parseFloat(fundAmount) > maxFundAmount
+                        ? "border-red-500"
+                        : "border-gray-200"
+                        } rounded-2xl px-6 py-4 text-left text-2xl font-['Outfit'] text-gray-900 focus:outline-none focus:border-[#4C82FB] transition-colors`}
                     />
                     <span className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 font-['Plus_Jakarta_Sans']">
                       IDRS

@@ -57,16 +57,18 @@ contract InvoiceLending {
 
     function createLoanRequest(
         uint256 _amount,
-        uint256 _interest,
+        uint256 _interest, // Input dalam Basis Points (e.g. 500 = 5%)
         uint256 _duration,
         string memory _ipfsHash,
         string memory _invoiceNumber
     ) external {
+        require(_interest >= 100, "Interest too low (min 1%)");
+
         Loan storage newLoan = loans[nextLoanId];
         newLoan.id = nextLoanId;
         newLoan.borrower = msg.sender;
         newLoan.amountRequested = _amount;
-        newLoan.interestRate = _interest;
+        newLoan.interestRate = _interest; 
         newLoan.duration = _duration;
         newLoan.ipfsHash = _ipfsHash;
         newLoan.invoiceNumber = _invoiceNumber;
@@ -99,6 +101,9 @@ contract InvoiceLending {
             loan.amountFunded + _amount <= loan.amountRequested,
             "Overfunded"
         );
+
+        require(msg.sender == tx.origin, "Only direct wallets allowed");
+
         require(
             token.transferFrom(msg.sender, address(this), _amount),
             "Transfer Failed"
@@ -128,8 +133,10 @@ contract InvoiceLending {
         Loan storage loan = loans[_loanId];
         require(msg.sender == loan.borrower, "Not Borrower");
         require(loan.state == LoanState.ACTIVE, "Not Active");
-        uint256 totalRepayment = loan.amountRequested +
-            ((loan.amountRequested * loan.interestRate) / 100);
+
+        uint256 interestAmount = (loan.amountRequested * loan.interestRate) / 10000;
+        uint256 totalRepayment = loan.amountRequested + interestAmount;
+
         require(
             token.transferFrom(msg.sender, address(this), totalRepayment),
             "Transfer Failed"
@@ -146,10 +153,10 @@ contract InvoiceLending {
     }
 
     function cancelLoanRequest(uint256 _loanId) external {
-    Loan storage loan = loans[_loanId];
-    require(msg.sender == loan.borrower, "Not Borrower");
-    require(loan.state == LoanState.PENDING || (loan.state == LoanState.OPEN && loan.amountFunded == 0), "Cannot Cancel");
+        Loan storage loan = loans[_loanId];
+        require(msg.sender == loan.borrower, "Not Borrower");
+        require(loan.state == LoanState.PENDING || (loan.state == LoanState.OPEN && loan.amountFunded == 0), "Cannot Cancel");
     
-    loan.state = LoanState.CLOSED;
+        loan.state = LoanState.CLOSED;
     }
 }

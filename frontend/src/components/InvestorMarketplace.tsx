@@ -181,7 +181,7 @@ export function InvestorMarketplace() {
                     <span className="text-gray-600">APR</span>
                     <span className="text-[#50E3C2] flex items-center gap-1 font-semibold">
                       <TrendingUp className="w-4 h-4" />
-                      {loan.interestRate}%
+                      {loan.interestRate / 100}%
                     </span>
                   </div>
                   <div className="flex justify-between font-['Plus_Jakarta_Sans']">
