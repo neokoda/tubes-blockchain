@@ -144,4 +144,12 @@ contract InvoiceLending {
         loan.state = LoanState.CLOSED;
         emit Repaid(_loanId, totalRepayment);
     }
+
+    function cancelLoanRequest(uint256 _loanId) external {
+    Loan storage loan = loans[_loanId];
+    require(msg.sender == loan.borrower, "Not Borrower");
+    require(loan.state == LoanState.PENDING || (loan.state == LoanState.OPEN && loan.amountFunded == 0), "Cannot Cancel");
+    
+    loan.state = LoanState.CLOSED;
+    }
 }

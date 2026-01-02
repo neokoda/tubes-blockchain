@@ -479,19 +479,24 @@ export function BorrowerDashboard() {
                     </div>
                   )}
 
-                  {loan.status === "funded" && (
-                    <div className="flex gap-3 mt-4">
+                  {loan.status === "open" && loan.fundedAmount >= loan.amount && (
+                    <div className="mt-4">
                       <button
                         onClick={() => handleWithdraw(loan.id)}
-                        className="flex-1 py-2 rounded-full bg-[#50E3C2] text-gray-900 hover:bg-[#50E3C2]/90 transition-colors font-['Plus_Jakarta_Sans'] font-semibold shadow-sm text-sm"
+                        className="w-full py-2 rounded-full bg-[#50E3C2] text-gray-900 hover:bg-[#50E3C2]/90 transition-colors font-['Plus_Jakarta_Sans'] font-semibold shadow-sm text-sm"
                       >
-                        Withdraw
+                        Withdraw Funds
                       </button>
+                    </div>
+                  )}
+
+                  {loan.status === "funded" && (
+                    <div className="mt-4">
                       <button
                         onClick={() => handleRepay(loan.id)}
-                        className="flex-1 py-2 rounded-full bg-gray-200 text-gray-900 hover:bg-gray-300 transition-colors font-['Plus_Jakarta_Sans'] font-semibold text-sm"
+                        className="w-full py-2 rounded-full bg-gray-200 text-gray-900 hover:bg-gray-300 transition-colors font-['Plus_Jakarta_Sans'] font-semibold text-sm"
                       >
-                        Repay
+                        Repay Loan
                       </button>
                     </div>
                   )}
