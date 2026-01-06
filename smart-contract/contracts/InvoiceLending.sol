@@ -57,7 +57,7 @@ contract InvoiceLending {
 
     function createLoanRequest(
         uint256 _amount,
-        uint256 _interest, // Input dalam Basis Points (e.g. 500 = 5%)
+        uint256 _interest,
         uint256 _duration,
         string memory _ipfsHash,
         string memory _invoiceNumber
@@ -68,7 +68,7 @@ contract InvoiceLending {
         newLoan.id = nextLoanId;
         newLoan.borrower = msg.sender;
         newLoan.amountRequested = _amount;
-        newLoan.interestRate = _interest; 
+        newLoan.interestRate = _interest;
         newLoan.duration = _duration;
         newLoan.ipfsHash = _ipfsHash;
         newLoan.invoiceNumber = _invoiceNumber;
@@ -133,7 +133,8 @@ contract InvoiceLending {
         require(msg.sender == loan.borrower, "Not Borrower");
         require(loan.state == LoanState.ACTIVE, "Not Active");
 
-        uint256 interestAmount = (loan.amountRequested * loan.interestRate) / 10000;
+        uint256 interestAmount = (loan.amountRequested * loan.interestRate) /
+            10000;
         uint256 totalRepayment = loan.amountRequested + interestAmount;
 
         require(
@@ -154,8 +155,12 @@ contract InvoiceLending {
     function cancelLoanRequest(uint256 _loanId) external {
         Loan storage loan = loans[_loanId];
         require(msg.sender == loan.borrower, "Not Borrower");
-        require(loan.state == LoanState.PENDING || (loan.state == LoanState.OPEN && loan.amountFunded == 0), "Cannot Cancel");
-    
+        require(
+            loan.state == LoanState.PENDING ||
+                (loan.state == LoanState.OPEN && loan.amountFunded == 0),
+            "Cannot Cancel"
+        );
+
         loan.state = LoanState.CLOSED;
     }
 
@@ -163,16 +168,22 @@ contract InvoiceLending {
 
     function expireLoan(uint256 _loanId) external {
         Loan storage loan = loans[_loanId];
-    
-        require(block.timestamp > loan.startTime + loan.duration, "Loan not expired yet");
-    
-        require(loan.state == LoanState.OPEN || loan.state == LoanState.PENDING, "Invalid state for expiration");
+
+        require(
+            block.timestamp > loan.startTime + loan.duration,
+            "Loan not expired yet"
+        );
+
+        require(
+            loan.state == LoanState.OPEN || loan.state == LoanState.PENDING,
+            "Invalid state for expiration"
+        );
 
         uint256 totalRefunded = 0;
         for (uint i = 0; i < loan.investors.length; i++) {
             address inv = loan.investors[i];
             uint256 amount = contributions[_loanId][inv];
-        
+
             if (amount > 0) {
                 contributions[_loanId][inv] = 0;
                 token.transfer(inv, amount);
@@ -188,11 +199,14 @@ contract InvoiceLending {
 
     function checkDefault(uint256 _loanId) external {
         Loan storage loan = loans[_loanId];
-        
-        require(loan.state == LoanState.ACTIVE, "Loan not active");
-        require(block.timestamp > loan.startTime + loan.duration, "Not yet due");
 
-        loan.state = LoanState.CLOSED; 
+        require(loan.state == LoanState.ACTIVE, "Loan not active");
+        require(
+            block.timestamp > loan.startTime + loan.duration,
+            "Not yet due"
+        );
+
+        loan.state = LoanState.CLOSED;
         emit LoanDefaulted(_loanId, loan.borrower);
     }
 }

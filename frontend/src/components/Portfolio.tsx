@@ -48,10 +48,10 @@ export function Portfolio() {
           const invested = parseFloat(ethers.formatEther(myContribution));
 
           if (invested > 0) {
-            const interest = (invested * loan.interestRate) / 100;
+            const interest = (invested * loan.interestRate) / 10000;
 
             let status: "active" | "repaid" = "active";
-            if (loan.status === "closed") status = "repaid";
+            if (loan.status === "repaid") status = "repaid";
 
             myInvestments.push({
               loanId: loan.id,
@@ -90,19 +90,6 @@ export function Portfolio() {
   const activeInvestments = investments.filter(
     (inv) => inv.status === "active"
   ).length;
-
-  const chartData = [
-    { month: "Jan", value: 20 },
-    { month: "Feb", value: 35 },
-    { month: "Mar", value: 45 },
-    { month: "Apr", value: 55 },
-    { month: "May", value: 75 },
-    { month: "Jun", value: 95 },
-    { month: "Jul", value: 120 },
-    { month: "Aug", value: 145 },
-  ];
-
-  const maxValue = Math.max(...chartData.map((d) => d.value));
 
   if (!address) {
     return (
@@ -174,38 +161,6 @@ export function Portfolio() {
         </div>
       </div>
 
-      {/* <div className="backdrop-blur-xl bg-white border border-gray-200 rounded-3xl p-8 mb-8 shadow-lg">
-        <h2 className="font-['Outfit'] font-bold text-2xl mb-6 text-gray-900">
-          Total Value Locked
-        </h2>
-
-        <div className="h-64 flex items-end gap-4">
-          {chartData.map((data, index) => {
-            const height = (data.value / maxValue) * 100;
-            return (
-              <div
-                key={index}
-                className="flex-1 flex flex-col items-center gap-2"
-              >
-                <div className="w-full flex flex-col justify-end h-48">
-                  <div
-                    className="w-full bg-gradient-to-t from-[#FF007A] to-[#4C82FB] rounded-t-lg transition-all duration-500 hover:opacity-80 cursor-pointer relative group"
-                    style={{ height: `${height}%` }}
-                  >
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white px-2 py-1 rounded text-xs font-['Plus_Jakarta_Sans'] whitespace-nowrap">
-                      {data.value}M IDRS
-                    </div>
-                  </div>
-                </div>
-                <div className="text-xs text-gray-600 font-['Plus_Jakarta_Sans']">
-                  {data.month}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div> */}
-
       <div className="backdrop-blur-xl bg-white border border-gray-200 rounded-3xl p-8 shadow-lg">
         <h2 className="font-['Outfit'] font-bold text-2xl mb-6 text-gray-900">
           My Investments
@@ -267,7 +222,7 @@ export function Portfolio() {
                       {investment.amountInvested.toLocaleString()} IDRS
                     </td>
                     <td className="py-4 px-4 text-right font-['Plus_Jakarta_Sans'] text-gray-900">
-                      {investment.apr}%
+                      {investment.apr / 100}%
                     </td>
                     <td className="py-4 px-4 text-right text-[#50E3C2] font-['Plus_Jakarta_Sans'] font-semibold">
                       +{investment.interestEarned.toLocaleString()} IDRS

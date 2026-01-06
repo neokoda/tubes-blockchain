@@ -9,21 +9,17 @@ interface LandingProps {
 export function Landing({ onConnectWallet, isWalletConnected }: LandingProps) {
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 via-white to-pink-50">
-      {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#FF007A]/5 via-transparent to-[#4C82FB]/5" />
 
-      {/* Grid pattern overlay */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] bg-[size:64px_64px]" />
 
       <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
-        {/* Logo */}
         <div className="inline-flex items-center gap-3 mb-8">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FF007A] to-[#4C82FB] flex items-center justify-center shadow-lg">
             <Zap className="w-8 h-8 text-white" />
           </div>
         </div>
 
-        {/* Hero Text */}
         <h1 className="font-['Outfit'] font-extrabold text-6xl mb-6 pb-2 bg-black">
           DeFi Lending for MSMEs
         </h1>
@@ -33,7 +29,6 @@ export function Landing({ onConnectWallet, isWalletConnected }: LandingProps) {
           get instant verification, secure funding.
         </p>
 
-        {/* CTA Buttons */}
         <div className="flex items-center justify-center gap-4 mb-16">
           {!isWalletConnected && (
             <button
@@ -45,7 +40,6 @@ export function Landing({ onConnectWallet, isWalletConnected }: LandingProps) {
           )}
         </div>
 
-        {/* Feature Cards */}
         <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             {

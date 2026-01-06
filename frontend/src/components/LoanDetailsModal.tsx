@@ -2,6 +2,7 @@ import { Building2, CheckCircle2, FileText, TrendingUp, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Loan } from "../types";
+import { useWallet } from "../context/WalletContext";
 
 interface LoanDetailsModalProps {
   loan: Loan;
@@ -18,10 +19,13 @@ export function LoanDetailsModal({
   onClose,
   onFundingComplete,
 }: LoanDetailsModalProps) {
+  const { address } = useWallet();
   const [fundAmount, setFundAmount] = useState("");
   const [loading, setLoading] = useState(false);
 
   if (!loan) return null;
+
+  const isOwner = address?.toLowerCase() === loan.borrowerAddress.toLowerCase();
 
   const remainingAmount = loan.amount - loan.fundedAmount;
   const maxFundAmount = Math.min(remainingAmount, balance);
@@ -40,7 +44,9 @@ export function LoanDetailsModal({
     const amount = parseFloat(fundAmount);
 
     if (amount > remainingAmount) {
-      toast.error(`Maximum amount you can fund: ${remainingAmount.toFixed(2)} IDRS`);
+      toast.error(
+        `Maximum amount you can fund: ${remainingAmount.toFixed(2)} IDRS`
+      );
       return;
     }
 
@@ -101,7 +107,8 @@ export function LoanDetailsModal({
                       Borrower
                     </div>
                     <div className="text-sm text-gray-600 font-['Plus_Jakarta_Sans']">
-                      {loan.borrowerAddress.slice(0, 10)}...{loan.borrowerAddress.slice(-8)}
+                      {loan.borrowerAddress.slice(0, 10)}...
+                      {loan.borrowerAddress.slice(-8)}
                     </div>
                   </div>
                 </div>
@@ -134,20 +141,20 @@ export function LoanDetailsModal({
                       Invoice #{loan.invoiceNumber}
                     </div>
                     <div className="text-xs text-gray-400 font-['Plus_Jakarta_Sans'] mt-1">
-                      IPFS: {loan.ipfsHash.slice(0, 15)}...
+                      IPFS: {loan.ipfsHash && loan.ipfsHash.slice(0, 15)}...
                     </div>
                   </div>
 
-                  {loan.ipfsHash && (<a
-
-                    href={`https://gateway.pinata.cloud/ipfs/${loan.ipfsHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full py-2 px-4 bg-[#4C82FB] hover:bg-[#3867d6] text-white rounded-xl transition-colors font-['Plus_Jakarta_Sans'] font-semibold text-sm"
-                  >
-                    <FileText className="w-4 h-4" />
-                    View Invoice Document
-                  </a>
+                  {loan.ipfsHash && (
+                    <a
+                      href={`https://gateway.pinata.cloud/ipfs/${loan.ipfsHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full py-2 px-4 bg-[#50E3C2] text-gray-900 hover:bg-[#50E3C2]/90 rounded-xl transition-colors font-['Plus_Jakarta_Sans'] font-semibold text-sm"
+                    >
+                      <FileText className="w-4 h-4" />
+                      View Invoice Document
+                    </a>
                   )}
                 </div>
               </div>
@@ -217,80 +224,96 @@ export function LoanDetailsModal({
                   Fund This Loan
                 </h3>
 
-                <div className="mb-6">
-                  <label className="text-sm text-gray-600 font-['Plus_Jakarta_Sans'] mb-2 block">
-                    Amount to Fund
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={fundAmount}
-                      onChange={(e) => setFundAmount(e.target.value)}
-                      max={maxFundAmount}
-                      placeholder="0"
-                      className={`w-full bg-white border ${fundAmount && parseFloat(fundAmount) > maxFundAmount
-                        ? "border-red-500"
-                        : "border-gray-200"
-                        } rounded-2xl px-6 py-4 text-left text-2xl font-['Outfit'] text-gray-900 focus:outline-none focus:border-[#4C82FB] transition-colors`}
-                    />
-                    <span className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 font-['Plus_Jakarta_Sans']">
-                      IDRS
-                    </span>
+                {isOwner ? (
+                  <div className="p-4 bg-yellow-50 text-yellow-800 rounded-2xl border border-yellow-200 text-sm font-['Plus_Jakarta_Sans'] text-center">
+                    You cannot fund your own loan request.
                   </div>
-                  {fundAmount && parseFloat(fundAmount) > maxFundAmount && (
-                    <div className="text-xs text-red-500 mt-2 font-['Plus_Jakarta_Sans']">
-                      {parseFloat(fundAmount) > remainingAmount
-                        ? `Maximum amount: ${remainingAmount.toFixed(2)} IDRS (loan limit)`
-                        : "Insufficient balance"}
+                ) : (
+                  <>
+                    <div className="mb-6">
+                      <label className="text-sm text-gray-600 font-['Plus_Jakarta_Sans'] mb-2 block">
+                        Amount to Fund
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={fundAmount}
+                          onChange={(e) => setFundAmount(e.target.value)}
+                          max={maxFundAmount}
+                          placeholder="0"
+                          disabled={isOwner}
+                          className={`w-full bg-white border ${
+                            fundAmount && parseFloat(fundAmount) > maxFundAmount
+                              ? "border-red-500"
+                              : "border-gray-200"
+                          } rounded-2xl px-6 py-4 text-left text-2xl font-['Outfit'] text-gray-900 focus:outline-none focus:border-[#4C82FB] transition-colors`}
+                        />
+                        <span className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 font-['Plus_Jakarta_Sans']">
+                          IDRS
+                        </span>
+                      </div>
+                      {fundAmount && parseFloat(fundAmount) > maxFundAmount && (
+                        <div className="text-xs text-red-500 mt-2 font-['Plus_Jakarta_Sans']">
+                          {parseFloat(fundAmount) > remainingAmount
+                            ? `Maximum amount: ${remainingAmount.toFixed(
+                                2
+                              )} IDRS (loan limit)`
+                            : "Insufficient balance"}
+                        </div>
+                      )}
+                      <div className="flex justify-between text-xs text-gray-400 mt-2 font-['Plus_Jakarta_Sans']">
+                        <span>Available: {balance.toLocaleString()} IDRS</span>
+                        <button
+                          onClick={() =>
+                            setFundAmount(maxFundAmount.toString())
+                          }
+                          className="text-[#4C82FB] hover:underline"
+                        >
+                          Max: {maxFundAmount.toFixed(2)}
+                        </button>
+                      </div>
                     </div>
-                  )}
-                  <div className="flex justify-between text-xs text-gray-400 mt-2 font-['Plus_Jakarta_Sans']">
-                    <span>Available: {balance.toLocaleString()} IDRS</span>
+
+                    <div className="bg-gradient-to-r from-[#50E3C2]/10 to-[#4C82FB]/10 border border-[#50E3C2]/30 rounded-2xl p-4 mb-6">
+                      <div className="text-sm text-gray-600 mb-1 font-['Plus_Jakarta_Sans']">
+                        Estimated Return (including principal)
+                      </div>
+                      <div className="text-2xl font-['Outfit'] font-bold text-[#50E3C2]">
+                        {parseFloat(estimatedReturn).toLocaleString()} IDRS
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1 font-['Plus_Jakarta_Sans']">
+                        After {loan.duration} days
+                      </div>
+                    </div>
+
                     <button
-                      onClick={() => setFundAmount(maxFundAmount.toString())}
-                      className="text-[#4C82FB] hover:underline"
+                      onClick={handleFund}
+                      disabled={
+                        loading ||
+                        !fundAmount ||
+                        parseFloat(fundAmount) <= 0 ||
+                        parseFloat(fundAmount) > maxFundAmount ||
+                        isOwner
+                      }
+                      className="w-full py-4 rounded-full font-['Outfit'] font-semibold transition-all bg-gradient-to-r from-[#FF007A] to-[#4C82FB] text-white hover:opacity-90 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Max: {maxFundAmount.toFixed(2)}
+                      {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                          Funding Loan...
+                        </span>
+                      ) : (
+                        "Fund Loan"
+                      )}
                     </button>
-                  </div>
-                </div>
 
-                <div className="bg-gradient-to-r from-[#50E3C2]/10 to-[#4C82FB]/10 border border-[#50E3C2]/30 rounded-2xl p-4 mb-6">
-                  <div className="text-sm text-gray-600 mb-1 font-['Plus_Jakarta_Sans']">
-                    Estimated Return (including principal)
-                  </div>
-                  <div className="text-2xl font-['Outfit'] font-bold text-[#50E3C2]">
-                    {parseFloat(estimatedReturn).toLocaleString()} IDRS
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1 font-['Plus_Jakarta_Sans']">
-                    After {loan.duration} days
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleFund}
-                  disabled={
-                    loading ||
-                    !fundAmount ||
-                    parseFloat(fundAmount) <= 0 ||
-                    parseFloat(fundAmount) > maxFundAmount
-                  }
-                  className="w-full py-4 rounded-full font-['Outfit'] font-semibold transition-all bg-gradient-to-r from-[#FF007A] to-[#4C82FB] text-white hover:opacity-90 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      Funding Loan...
-                    </span>
-                  ) : (
-                    "Fund Loan"
-                  )}
-                </button>
-
-                <div className="mt-6 text-xs text-gray-400 font-['Plus_Jakarta_Sans'] text-center">
-                  By funding this loan, you agree to the terms and conditions.
-                  Your funds will be locked for {loan.duration} days.
-                </div>
+                    <div className="mt-6 text-xs text-gray-400 font-['Plus_Jakarta_Sans'] text-center">
+                      By funding this loan, you agree to the terms and
+                      conditions. Your funds will be locked for {loan.duration}{" "}
+                      days.
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

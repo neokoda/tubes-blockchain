@@ -108,14 +108,12 @@ async function startOracle() {
                         console.log(`[FILTER DEBUG] "LoanDefaulted" events matched: ${defaultEvents.length}`);
                     }
 
-                    // 2. Loop setiap event default yang ditemukan
                     for (const event of defaultEvents as any[]) {
                         const loanId = event.args[0];
                         const borrowerAddress = event.args[1];
 
                         console.log(`[PENALTY] Processing Default for Loan ID: ${loanId}, Borrower: ${borrowerAddress}`);
 
-                        // 3. Update database: Kurangi skor kredit 500
                         db.run(
                             `UPDATE users SET credit_score = credit_score - 500 WHERE wallet_address = ?`,
                             [borrowerAddress],

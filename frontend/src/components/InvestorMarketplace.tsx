@@ -32,11 +32,16 @@ export function InvestorMarketplace() {
     }
   };
 
-  const openLoans = loans.filter(
-    (l) => l.fundedAmount < l.amount
-  );
-  loans.forEach(l => {
-    console.log(`Loan ${l.id}: status=${l.status}, funded=${l.fundedAmount}, amount=${l.amount}, passes=${(l.status === "open" || l.status === "active") && l.fundedAmount < l.amount}`);
+  const openLoans = loans.filter((l) => l.fundedAmount < l.amount);
+  loans.forEach((l) => {
+    console.log(
+      `Loan ${l.id}: status=${l.status}, funded=${l.fundedAmount}, amount=${
+        l.amount
+      }, passes=${
+        (l.status === "open" || l.status === "active") &&
+        l.fundedAmount < l.amount
+      }`
+    );
   });
 
   const getScoreColor = (score: number) => {
@@ -62,7 +67,8 @@ export function InvestorMarketplace() {
             Connect Your Wallet
           </h2>
           <p className="text-gray-600 font-['Plus_Jakarta_Sans'] text-center max-w-md">
-            Connect your wallet to view and invest in available loan opportunities
+            Connect your wallet to view and invest in available loan
+            opportunities
           </p>
         </div>
       </div>
@@ -93,7 +99,8 @@ export function InvestorMarketplace() {
             const fundingProgress = (loan.fundedAmount / loan.amount) * 100;
             const borrowerHistory = loans.filter(
               (l) =>
-                l.borrowerAddress.toLowerCase() === loan.borrowerAddress.toLowerCase() &&
+                l.borrowerAddress.toLowerCase() ===
+                  loan.borrowerAddress.toLowerCase() &&
                 (l.status === "closed" || l.status === "repaid")
             );
 
@@ -103,7 +110,7 @@ export function InvestorMarketplace() {
 
             const calculatedScore = Math.min(
               maxScore,
-              baseScore + (borrowerHistory.length * pointsPerRepayment)
+              baseScore + borrowerHistory.length * pointsPerRepayment
             );
 
             const score = calculatedScore;
@@ -112,7 +119,7 @@ export function InvestorMarketplace() {
             return (
               <div
                 key={loan.id}
-                className="backdrop-blur-xl bg-white border border-gray-200 rounded-3xl p-6 hover:border-gray-300 hover:transform hover:-translate-y-2 transition-all cursor-pointer shadow-lg hover:shadow-xl"
+                className="backdrop-blur-xl bg-white border border-gray-200 rounded-3xl p-6 hover:border-gray-300 hover:transform hover:-translate-y-2 transition-all shadow-lg hover:shadow-xl"
                 onClick={() => setSelectedLoan(loan)}
               >
                 <div className="flex items-start justify-between mb-6">
@@ -159,7 +166,9 @@ export function InvestorMarketplace() {
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                       <div
-                        className={`text-xl font-['Outfit'] font-bold ${getScoreColor(score)}`}
+                        className={`text-xl font-['Outfit'] font-bold ${getScoreColor(
+                          score
+                        )}`}
                       >
                         {score}
                       </div>
@@ -205,7 +214,7 @@ export function InvestorMarketplace() {
                   </div>
                 </div>
 
-                <button className="w-full py-3 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors font-['Plus_Jakarta_Sans'] font-semibold text-gray-900">
+                <button className="w-full py-3 rounded-full bg-[#50E3C2]  hover:cursor-pointer transition-colors font-['Plus_Jakarta_Sans'] font-semibold text-gray-900">
                   View Details
                 </button>
               </div>
@@ -218,7 +227,7 @@ export function InvestorMarketplace() {
         <LoanDetailsModal
           loan={selectedLoan}
           balance={parseFloat(walletBalance)}
-          setBalance={() => { }}
+          setBalance={() => {}}
           onClose={() => setSelectedLoan(null)}
           onFundingComplete={handleFundingComplete}
         />
