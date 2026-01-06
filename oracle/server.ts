@@ -20,7 +20,8 @@ const RPC_URL = process.env.RPC_URL;
 const CONTRACT_ABI = [
     "event LoanCreated(uint256 loanId, address borrower, uint256 amount, string invoiceNumber, uint256 duration)",
     "function verifyLoan(uint256 _loanId, bool _isValid) external",
-    "function loans(uint256) view returns (uint256 id, address borrower, uint256 amountRequested, uint256 amountFunded, string ipfsHash, string invoiceNumber, uint256 interestRate, uint8 state, address[] investors)"
+    "function loans(uint256) view returns (uint256 id, address borrower, uint256 amountRequested, uint256 amountFunded, string ipfsHash, string invoiceNumber, uint256 interestRate, uint8 state, address[] investors)",
+    "event LoanDefaulted(uint256 loanId, address borrower)"
 ];
 
 app.post('/api/profile', (req, res) => {
@@ -99,6 +100,33 @@ async function startOracle() {
                                 console.error(`[TX FAILED] ${txErr.message}`);
                             }
                         });
+                    }
+
+                    const defaultEvents = await contract.queryFilter("LoanDefaulted", lastProcessedBlock + 1, latestBlock);
+
+                    if (defaultEvents.length > 0) {
+                        console.log(`[FILTER DEBUG] "LoanDefaulted" events matched: ${defaultEvents.length}`);
+                    }
+
+                    // 2. Loop setiap event default yang ditemukan
+                    for (const event of defaultEvents as any[]) {
+                        const loanId = event.args[0];
+                        const borrowerAddress = event.args[1];
+
+                        console.log(`[PENALTY] Processing Default for Loan ID: ${loanId}, Borrower: ${borrowerAddress}`);
+
+                        // 3. Update database: Kurangi skor kredit 500
+                        db.run(
+                            `UPDATE users SET credit_score = credit_score - 500 WHERE wallet_address = ?`,
+                            [borrowerAddress],
+                            (err) => {
+                                if (err) {
+                                    console.error(`[DB ERROR] Failed to update credit score: ${err.message}`);
+                                } else {
+                                    console.log(`[SUCCESS] Penalized borrower ${borrowerAddress} (-500 score)`);
+                                }
+                            }
+                        );
                     }
 
                     lastProcessedBlock = latestBlock;
